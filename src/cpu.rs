@@ -1,6 +1,7 @@
 use crate::display::Display;
 use crate::keyboard::Keyboard;
-use rand::prelude::*;
+extern crate rand;
+use rand::Rng;
 
 const CPU_MEMORY: usize = 4096;
 pub struct CPU { 
@@ -20,8 +21,8 @@ pub struct CPU {
 impl CPU { 
     // needs to create a new CPU and initialize the memory perhaps.
     pub fn new() -> CPU { 
-        let mut memory = [0x00; CPU_MEMORY];
-        let mut stack = [0x000; 16];
+        let memory = [0x00; CPU_MEMORY];
+        let stack = [0x000; 16];
         return CPU {
             reg_v: [0; 16],
             flag: 0, 
@@ -209,52 +210,130 @@ impl CPU {
         }
         return 2;
     }
-
+    /**
+     * Display n-byte sprite starting at memory location I, at (Vx, Vy)
+     * Set V_f = collision
+     * Interpreter should read  n bytes from memory starting at I.
+     * These bytes are displayed as sprites on the screen at (Vx, Vy)
+     * Sprites are XORed onto the screen.
+     * If any pixels are erased in this XOR; set V_f to 1. Otherwise V_f is 0
+     * If the sprite is positioned outside of the display; a wrap around 
+     * to the other side should occur.
+     */ 
     fn handle_dxyn(&mut self, opcode: u16) -> u16{ 
         // TODO
+        let x = self.reg_v[get_x(opcode)];
+        let y = self.reg_v[get_y(opcode)];
+        let n = get_n(opcode);
+        let mut sprite_vector: Vec<u8> = Vec::new();
+        for i in 0..n+1 { 
+            sprite_vector.push(self.memory[i]);
+        }
+        let collision = self.display.overwrite_sprite(&sprite_vector, &x, &y);
+        if collision { 
+            self.flag = 1;
+        } else { 
+            self.flag = 0;
+        }
         return 2;
     }
+
     /**
      * Vx = random byte AND kk
      * random byte is a random number from 
      */
-    fn handle_cxkk(&mut self, opcode: u16) -> u16{ 
-        // TODO CREATE A RANDOM NUMBER FROM 0 to 255
+    fn handle_cxkk(&mut self, opcode: u16) -> u16 { 
+        let val: u8 = rand::thread_rng().gen();
+        self.reg_v[get_x(opcode)] = val & get_kk(opcode) as u8;
         return 2;
     }
-
+    /**
+     * Jump to locatin nnn + v0
+     */
     fn handle_bnnn(&mut self, opcode: u16) -> u16{ 
-        // TODO
-        return 2;
+        let v0 = self.reg_v[0];
+        let nnn = get_nnn(opcode);
+        let pc = v0 as u16 + nnn as u16;
+        return pc;
     }
-
-
+    /**
+     * Set value of register I to NNN
+     */
     fn handle_annn(&mut self, opcode: u16) -> u16{ 
-        // TODO
+        let nnn = get_nnn(opcode);
+        self.reg_i = nnn;  
         return 2;
     }
 
-
+    /**
+     * Skip next instr if Vx != Vy
+     */
     fn handle_9xy0(&mut self, opcode: u16) -> u16{ 
-        // TODO
+        if self.reg_v[get_x(opcode)] != self.reg_v[get_y(opcode)] { 
+            return 4;
+        }
         return 2;
     }
-
-    fn handle_8xye(&mut self, opcode: u16) -> u16{ 
-        // TODO
+    /**
+     * If the most significant bit of Vx is 1, then set V_f to 1. Otherwise 0.
+     * V_x following this is also multipled by 2.
+     */
+    fn handle_8xye(&mut self, opcode: u16) -> u16 { 
+        let v_x = self.reg_v[get_x(opcode)];
+        let most_sig_bit = v_x & 0xf000 >> 12;
+        if most_sig_bit == 1 { 
+            self.flag = 1;
+        } else { 
+            self.flag = 0;
+        }
+        self.reg_v[get_x(opcode)] = v_x * 2;
         return 2;
     }
+    /**
+     * If Vx > Vy, V_f is 1; otherwise V_f 0.
+     * Then sets V_x = Vy - Vx
+     */
     fn handle_8xy7(&mut self, opcode: u16) -> u16{ 
-        // TODO
+        let v_y = self.reg_v[get_y(opcode)];
+        let v_x = self.reg_v[get_x(opcode)];
+        if v_x > v_y { 
+            self.flag = 1;
+        } else { 
+            self.flag = 0;
+        }
+        self.reg_v[get_x(opcode)] = v_y - v_x;
         return 2;
     }
-
+    /**
+     * If lesat significant bit of V_x is 1; then V_f is 1.
+     * Otherwise, v_f is 0;
+     * V_x is then divided by 2 and saved.
+     */
     fn handle_8xy6(&mut self, opcode: u16) -> u16{ 
-        // TODO
+        let v_x = self.reg_v[get_x(opcode)];
+        let least_sig_bit = v_x & 0x000f;
+        if least_sig_bit == 1 { 
+            self.flag = 1;
+        } else { 
+            self.flag = 0;
+        }
+        self.reg_v[get_x(opcode)] = v_x / 2;
         return 2;
     }
+    /**
+     * If V_x > V_y then V_flag = 1
+     * Otherwise v_flag = 0
+     * Then sets V_x = V_x - V_y
+     */
     fn handle_8xy5(&mut self, opcode: u16) -> u16{ 
-        // TODO
+        let v_x = self.reg_v[get_x(opcode)];
+        let v_y = self.reg_v[get_y(opcode)];
+        if v_x == v_y { 
+            self.flag = 1;
+        } else { 
+            self.flag = 0;
+        }
+        self.reg_v[get_x(opcode)] = v_x - v_y;
         return 2;
     }
     /**
@@ -363,6 +442,10 @@ impl CPU {
         return self.pc;
     }
 }
+
+fn get_nnn(opcode: u16) -> usize { 
+    return (opcode & 0x0fff) as usize;
+}
 /**
  * Returns the integer representation of x from the u16. 
  */
@@ -378,4 +461,7 @@ fn get_kk(opcode: u16) -> usize {
 
 fn get_y(opcode: u16) -> usize { 
     return (opcode & 0x00f0 > 4) as usize;
+}
+fn get_n(opcode: u16) -> usize { 
+    return (opcode & 0x000f) as usize;
 }
