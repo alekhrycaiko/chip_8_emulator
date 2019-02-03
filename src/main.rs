@@ -4,6 +4,7 @@ use std::env;
 mod decompiler;
 mod cpu;
 mod display;
+mod keyboard;
 
 /**
  * exercise:
