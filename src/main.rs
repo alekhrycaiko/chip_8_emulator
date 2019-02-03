@@ -29,7 +29,7 @@ fn main() {
     let mut buffer = Vec::new();
     // read the whole file
     file.read_to_end(&mut buffer).unwrap();
-    let cpu = cpu::CPU::new();
-    decompiler::decompile(&buffer, &cpu);
+    let mut cpu = cpu::CPU::new();
+    decompiler::decompile(&buffer, &mut cpu);
 }
 

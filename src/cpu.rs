@@ -280,7 +280,7 @@ impl CPU {
      */
     fn handle_8xye(&mut self, opcode: u16) -> u16 { 
         let v_x = self.reg_v[get_x(opcode)];
-        let most_sig_bit = v_x & 0xf000 >> 12;
+        let most_sig_bit = v_x >> 7;
         if most_sig_bit == 1 { 
             self.flag = 1;
         } else { 
@@ -311,7 +311,7 @@ impl CPU {
      */
     fn handle_8xy6(&mut self, opcode: u16) -> u16{ 
         let v_x = self.reg_v[get_x(opcode)];
-        let least_sig_bit = v_x & 0x000f;
+        let least_sig_bit = v_x & 0x1;
         if least_sig_bit == 1 { 
             self.flag = 1;
         } else { 
