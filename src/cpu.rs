@@ -14,12 +14,11 @@ pub struct CPU {
     sp: usize,
     stack: [u16; 16],
     memory: [u8; CPU_MEMORY],
-    display: Display,
+    pub display: Display,
     keyboard: Keyboard
 }
 
 impl CPU { 
-    // needs to create a new CPU and initialize the memory perhaps.
     pub fn new() -> CPU { 
         let memory = [0x00; CPU_MEMORY];
         let stack = [0x000; 16];
@@ -93,7 +92,7 @@ impl CPU {
         return self.pc;
     }
     fn handle_cls(&mut self) -> u16 { 
-        self.display.clear();
+        self.display.canvas.clear();
         return 2 as u16;
     }
 
@@ -464,4 +463,14 @@ fn get_y(opcode: u16) -> usize {
 }
 fn get_n(opcode: u16) -> usize { 
     return (opcode & 0x000f) as usize;
+}
+
+
+#[cfg(test)]
+mod tests {
+    // TODO write tests for the above functions.
+    #[test]
+    fn test_get_n() {
+        assert_eq!(2 + 2, 4);
+    }
 }
