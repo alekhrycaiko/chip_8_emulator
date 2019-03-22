@@ -1,14 +1,18 @@
 use sdl2;
 use sdl2::render::Canvas;
-use sdl2::rect::Rect;
 use sdl2::pixels::Color;
 
 const WINDOW_NAME: &str = "CHIP8";
 const WINDOW_WIDTH: u32 = 800;
 const WINDOW_HEIGHT: u32 = 600;
 
+const RED: u8 = 0;
+const BLUE: u8 = 0;
+const GREEN: u8 = 0;
+
 pub struct Display { 
-    pub canvas: Canvas<sdl2::video::Window>    
+    pub canvas: Canvas<sdl2::video::Window>,
+    pub sdl_context: sdl2::Sdl
 }
 
 impl Display { 
@@ -22,18 +26,18 @@ impl Display {
             .build()
             .unwrap();
         let mut canvas = window.into_canvas().build().unwrap();
-        canvas.set_draw_color(Color::RGB(0, 0, 0));
-        // A draw a rectangle which almost fills our window with it !
-        canvas.fill_rect(Rect::new(10, 10, 780, 580));
+        canvas.set_draw_color(Color::RGB(RED, GREEN, BLUE));
+        canvas.clear();
+        canvas.present();
         return Display { 
-            canvas: canvas
+            canvas: canvas,
+            sdl_context: sdl_context
         }
     }
     /*
     pub fn start_display() { 
         let mut event_pump = self.sdl.event_pump().unwrap();
-        loop {
-            for _event in event_pump.poll_iter() {
+        loop { for _event in event_pump.poll_iter() {
                 // match events here.. TODO: how do we clear the display?
                 // how do we update the display....
                 match event {
