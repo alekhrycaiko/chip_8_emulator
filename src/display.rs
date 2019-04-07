@@ -40,9 +40,9 @@ impl Display {
     /**
      * Given a set of pixels, draw them on the canvas.
      */
-    pub fn draw(&mut self, pixels: [[&u8; 64]; 32]) -> bool { 
+    pub fn draw(&mut self, pixels: &[[u8; 64]; 32]) -> bool { 
         for (x, row) in pixels.iter().enumerate() { 
-            for (y, col) in row.iter().enumerate() {
+            for (y, _col) in row.iter().enumerate() {
                 // do we set draw color based on collission....?
                 self.canvas.set_draw_color((255, 255, 255));
                 self.canvas.fill_rect(Rect::new(x as i32, y as i32, SCALE, SCALE));

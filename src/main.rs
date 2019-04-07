@@ -38,10 +38,11 @@ fn main() {
                 _ => {}
             }
         }
-        if cpu.flag == 1 { 
-            display.draw(cpu.display_memory); 
+        let result = cpu.cycle();
+        if result.flag == 1 { 
+            display.draw(result.display_memory); 
         }
-        cpu.handle_opcode();
+
         display.canvas.present();
     }
 }

@@ -2,13 +2,20 @@ use crate::keyboard::Keyboard;
 extern crate rand;
 use rand::Rng;
 
-pub const DISPLAY_WIDTH: usize = 62;
-pub const DISPLAY_HEIGHT: usize = 32;
+const DISPLAY_WIDTH: usize = 64;
+const DISPLAY_HEIGHT: usize = 32;
 const CPU_MEMORY: usize = 4096;
+
+
+// output struct to help handle lifetimes.
+pub struct Output<'a> { 
+   pub display_memory:  &'a [[u8; DISPLAY_WIDTH]; DISPLAY_HEIGHT],
+   pub flag: u8
+}
 
 pub struct CPU { 
     reg_v: [u8; 16],
-    pub flag: u8,
+    flag: u8,
     reg_i: usize, // special register; right most 12 bits are used.
     delay_timer: u8,
     sound_timer: u8,
@@ -17,7 +24,7 @@ pub struct CPU {
     stack: [u16; 16],
     memory: [u8; CPU_MEMORY],
     keyboard: Keyboard,
-    pub display_memory: [[&u8; DISPLAY_WIDTH]; DISPLAY_HEIGHT]
+    display_memory: [[u8; DISPLAY_WIDTH]; DISPLAY_HEIGHT]
 }
 
 impl CPU { 
@@ -53,8 +60,14 @@ impl CPU {
         };
     }
     
-
-
+    pub fn cycle(&mut self) -> Output { 
+        self.handle_opcode();
+        return Output { 
+            display_memory: &self.display_memory,
+            flag: self.flag
+        }
+    }
+    
     fn get_opcode(&mut self) -> u16 { 
         let first_byte = self.memory[self.pc as usize];
         let second_byte = self.memory[self.pc as usize +1];
@@ -121,8 +134,9 @@ impl CPU {
     }
 
     fn handle_cls(&mut self) -> u16 { 
-        for (x, row) in self.display_memory.iter().enumerate() { 
-            for (y, row) in row.iter().enumerate() { 
+        let memory = self.display_memory;
+        for (x, row) in memory.iter().enumerate() { 
+            for (y, _) in row.iter().enumerate() { 
                 self.display_memory[y][x] = 0;
             }
         }
