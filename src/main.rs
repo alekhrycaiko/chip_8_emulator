@@ -39,10 +39,11 @@ fn main() {
             }
         }
         let result = cpu.cycle();
+        println!("{}", result.flag);
         if result.flag == 1 { 
             display.draw(result.display_memory); 
+            display.canvas.present();
         }
 
-        display.canvas.present();
     }
 }

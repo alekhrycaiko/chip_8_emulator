@@ -274,8 +274,7 @@ impl CPU {
         for i in 0..n { 
             for bit in 0..8 { 
                 let sprite_value = (self.memory[self.reg_i + i] >> 7 - bit) & 1;
-                let collision = self.display_memory[y][x] & sprite_value;
-                self.memory[0x0f] |= collision;
+                self.flag = self.display_memory[y][x] & sprite_value;
                 self.display_memory[y][x] ^= sprite_value; 
             }
         }
