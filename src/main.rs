@@ -9,7 +9,6 @@ mod cpu;
 mod display;
 mod keyboard;
 
-
 fn main() {
     let args: Vec<_> = env::args().collect();
     if args.len() < 1 {
@@ -39,7 +38,10 @@ fn main() {
                 _ => {}
             }
         }
-        cpu.handle_opcode(&mut display);
+        if cpu.flag == 1 { 
+            display.draw(cpu.display_memory); 
+        }
+        cpu.handle_opcode();
         display.canvas.present();
     }
 }

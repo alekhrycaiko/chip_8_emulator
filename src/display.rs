@@ -1,10 +1,13 @@
 use sdl2;
 use sdl2::render::Canvas;
 use sdl2::pixels::Color;
+use sdl2::rect::Rect;
 
 const WINDOW_NAME: &str = "CHIP8";
-const WINDOW_WIDTH: u32 = 800;
-const WINDOW_HEIGHT: u32 = 600;
+
+const SCALE:u32 = 10;
+const WINDOW_WIDTH: u32 = 800 * SCALE;
+const WINDOW_HEIGHT: u32 = 600 * SCALE;
 
 const RED: u8 = 0;
 const BLUE: u8 = 0;
@@ -35,13 +38,19 @@ impl Display {
         }
     }
     /**
-     * Overwrites the sprite onto the current size.
-     * Returns true if the overwrite was successful.
-     * Returns false if the write was successful, but, was not an overwrite.
+     * Given a set of pixels, draw them on the canvas.
      */
-    pub fn overwrite_sprite(&self, sprite_bytes: &Vec<u8>, x: &u8, y: &u8) -> bool { 
-        println!("TODO {} {}", x, y);
+    pub fn draw(&mut self, pixels: [[&u8; 64]; 32]) -> bool { 
+        for (x, row) in pixels.iter().enumerate() { 
+            for (y, col) in row.iter().enumerate() {
+                // do we set draw color based on collission....?
+                self.canvas.set_draw_color((255, 255, 255));
+                self.canvas.fill_rect(Rect::new(x as i32, y as i32, SCALE, SCALE));
+            }
+        }
+        // todo remove if collision?
         return true;
+
     }
 }
 

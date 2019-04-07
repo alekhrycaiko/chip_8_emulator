@@ -1,12 +1,14 @@
-use crate::display::Display;
 use crate::keyboard::Keyboard;
 extern crate rand;
 use rand::Rng;
 
+pub const DISPLAY_WIDTH: usize = 62;
+pub const DISPLAY_HEIGHT: usize = 32;
 const CPU_MEMORY: usize = 4096;
+
 pub struct CPU { 
     reg_v: [u8; 16],
-    flag: u8,
+    pub flag: u8,
     reg_i: usize, // special register; right most 12 bits are used.
     delay_timer: u8,
     sound_timer: u8,
@@ -14,7 +16,8 @@ pub struct CPU {
     sp: usize,
     stack: [u16; 16],
     memory: [u8; CPU_MEMORY],
-    keyboard: Keyboard
+    keyboard: Keyboard,
+    pub display_memory: [[&u8; DISPLAY_WIDTH]; DISPLAY_HEIGHT]
 }
 
 impl CPU { 
@@ -45,7 +48,8 @@ impl CPU {
             sp: 0,
             stack: stack,
             memory: memory,
-            keyboard: Keyboard::new()
+            keyboard: Keyboard::new(),
+            display_memory: [[0; DISPLAY_WIDTH]; DISPLAY_HEIGHT]
         };
     }
     
@@ -57,8 +61,8 @@ impl CPU {
         let opcode = ((first_byte as u16) << 8) | second_byte as u16;
         return opcode
     }
-    // TODO: We should handle this differently.. all of this is mutation; rather we should set/get?
-    pub fn handle_opcode(&mut self, display: &mut Display) -> u16 { 
+    
+    pub fn handle_opcode(&mut self) -> u16 { 
         let opcode = self.get_opcode();
 
         let tuple_opcode = (
@@ -68,7 +72,7 @@ impl CPU {
             (opcode & 0x000f) as u8
         );
         return match tuple_opcode {
-            (0x0, 0x0, 0xe, 0x0) => self.handle_cls(display),
+            (0x0, 0x0, 0xe, 0x0) => self.handle_cls(),
             (0x0, 0x0, 0xe, 0xe) => self.handle_ret(),
             (0x0, _, _, _) => self.handle_0nnn(opcode),
             (0x1, _, _, _) => self.handle_1nnn(opcode), 
@@ -91,7 +95,7 @@ impl CPU {
             (0xa, _, _, _) =>	self.handle_annn(opcode),
             (0xb, _, _, _) => self.handle_bnnn(opcode),
             (0xc, _, _, _) => self.handle_cxkk(opcode),
-            (0xd, _, _, _) => self.handle_dxyn(opcode, display),
+            (0xd, _, _, _) => self.handle_dxyn(opcode),
             (0xe, _, 0x9, 0xe) => self.handle_ex9e(opcode),
             (0xe, _, 0xa, 0x1) => self.handle_exa1(opcode),
             (0xf, _, 0x0, 0x7) => self.handle_fx07(opcode), 
@@ -115,8 +119,13 @@ impl CPU {
         self.pc = opcode & 0x0fff >> 4;   
         return self.pc;
     }
-    fn handle_cls(&mut self, display: &mut Display) -> u16 { 
-        display.canvas.clear();
+
+    fn handle_cls(&mut self) -> u16 { 
+        for (x, row) in self.display_memory.iter().enumerate() { 
+            for (y, row) in row.iter().enumerate() { 
+                self.display_memory[y][x] = 0;
+            }
+        }
         return 2 as u16;
     }
 
@@ -242,21 +251,19 @@ impl CPU {
      * If any pixels are erased in this XOR; set V_f to 1. Otherwise V_f is 0
      * If the sprite is positioned outside of the display; a wrap around 
      * to the other side should occur.
+     *
      */ 
-    fn handle_dxyn(&mut self, opcode: u16, display: &mut Display) -> u16{ 
-        // TODO
-        let x = self.reg_v[get_x(opcode)];
-        let y = self.reg_v[get_y(opcode)];
+    fn handle_dxyn(&mut self, opcode: u16) -> u16{ 
+        let x = (self.reg_v[get_x(opcode)] as usize) % DISPLAY_WIDTH;
+        let y = (self.reg_v[get_y(opcode)] as usize) % DISPLAY_HEIGHT;
         let n = get_n(opcode);
-        let mut sprite_vector: Vec<u8> = Vec::new();
-        for i in 0..n+1 { 
-            sprite_vector.push(self.memory[i]);
-        }
-        let collision = display.overwrite_sprite(&sprite_vector, &x, &y);
-        if collision { 
-            self.flag = 1;
-        } else { 
-            self.flag = 0;
+        for i in 0..n { 
+            for bit in 0..8 { 
+                let sprite_value = (self.memory[self.reg_i + i] >> 7 - bit) & 1;
+                let collision = self.display_memory[y][x] & sprite_value;
+                self.memory[0x0f] |= collision;
+                self.display_memory[y][x] ^= sprite_value; 
+            }
         }
         return 2;
     }
