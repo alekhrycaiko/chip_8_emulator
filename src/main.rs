@@ -23,7 +23,6 @@ fn main() {
     let mut buffer = Vec::new();
     file.read_to_end(&mut buffer).unwrap();
     let mut cpu = cpu::CPU::new(&buffer);
-    // Issue here is im not borrowing im literally 'get' display and copy to display.
     let mut display = display::Display::new(); 
     let mut i = 0;
     let sdl_context = &display.sdl_context;
@@ -40,8 +39,6 @@ fn main() {
                 _ => {}
             }
         }
-        // TODO: Fix this. we are mutating CPU in this case... is bad
-        // handle opcode borrows cpu.display hmm
         cpu.handle_opcode(&mut display);
         display.canvas.present();
     }
