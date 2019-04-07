@@ -14,7 +14,6 @@ pub struct CPU {
     sp: usize,
     stack: [u16; 16],
     memory: [u8; CPU_MEMORY],
-    pub display: Display,
     keyboard: Keyboard
 }
 
@@ -24,15 +23,16 @@ impl CPU {
 
         let stack = [0x000; 16];
         let mut memory = [0x00; CPU_MEMORY];
-        let i = 0;
+        let mut i = 0;
         let length = file_buffer.len();
         while i < length {
             let address = 0x200 + i;
             if address < 4096 {
-                memory[i + 200] = file_buffer[address];
+                memory[address] = file_buffer[i];
             } else {
                 break;
             }
+            i = i+1;
         }
 
         return CPU {
@@ -45,7 +45,6 @@ impl CPU {
             sp: 0,
             stack: stack,
             memory: memory,
-            display: Display::new(),
             keyboard: Keyboard::new()
         };
     }
@@ -59,7 +58,7 @@ impl CPU {
         return opcode
     }
     // TODO: We should handle this differently.. all of this is mutation; rather we should set/get?
-    pub fn handle_opcode(&mut self) -> u16 { 
+    pub fn handle_opcode(&mut self, display: &mut Display) -> u16 { 
         let opcode = self.get_opcode();
 
         let tuple_opcode = (
@@ -69,7 +68,7 @@ impl CPU {
             (opcode & 0x000f) as u8
         );
         return match tuple_opcode {
-            (0x0, 0x0, 0xe, 0x0) => self.handle_cls(),
+            (0x0, 0x0, 0xe, 0x0) => self.handle_cls(display),
             (0x0, 0x0, 0xe, 0xe) => self.handle_ret(),
             (0x0, _, _, _) => self.handle_0nnn(opcode),
             (0x1, _, _, _) => self.handle_1nnn(opcode), 
@@ -92,7 +91,7 @@ impl CPU {
             (0xa, _, _, _) =>	self.handle_annn(opcode),
             (0xb, _, _, _) => self.handle_bnnn(opcode),
             (0xc, _, _, _) => self.handle_cxkk(opcode),
-            (0xd, _, _, _) => self.handle_dxyn(opcode),
+            (0xd, _, _, _) => self.handle_dxyn(opcode, display),
             (0xe, _, 0x9, 0xe) => self.handle_ex9e(opcode),
             (0xe, _, 0xa, 0x1) => self.handle_exa1(opcode),
             (0xf, _, 0x0, 0x7) => self.handle_fx07(opcode), 
@@ -116,8 +115,8 @@ impl CPU {
         self.pc = opcode & 0x0fff >> 4;   
         return self.pc;
     }
-    fn handle_cls(&mut self) -> u16 { 
-        self.display.canvas.clear();
+    fn handle_cls(&mut self, display: &mut Display) -> u16 { 
+        display.canvas.clear();
         return 2 as u16;
     }
 
@@ -244,7 +243,7 @@ impl CPU {
      * If the sprite is positioned outside of the display; a wrap around 
      * to the other side should occur.
      */ 
-    fn handle_dxyn(&mut self, opcode: u16) -> u16{ 
+    fn handle_dxyn(&mut self, opcode: u16, display: &mut Display) -> u16{ 
         // TODO
         let x = self.reg_v[get_x(opcode)];
         let y = self.reg_v[get_y(opcode)];
@@ -253,7 +252,7 @@ impl CPU {
         for i in 0..n+1 { 
             sprite_vector.push(self.memory[i]);
         }
-        let collision = self.display.overwrite_sprite(&sprite_vector, &x, &y);
+        let collision = display.overwrite_sprite(&sprite_vector, &x, &y);
         if collision { 
             self.flag = 1;
         } else { 
