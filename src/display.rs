@@ -34,23 +34,6 @@ impl Display {
             sdl_context: sdl_context
         }
     }
-    /*
-    pub fn start_display() { 
-        let mut event_pump = self.sdl.event_pump().unwrap();
-        loop { for _event in event_pump.poll_iter() {
-                // match events here.. TODO: how do we clear the display?
-                // how do we update the display....
-                match event {
-                    sdl2::event::Event::Quit {..} => break 'main,
-                    _ => {},
-                }
-            }
-            let video_subsystem = sdl.video().unwrap();
-            video_subsystem.window("Chip8", 900, 700).build().unwrap();
-        }
-    }
-    */
-
     /**
      * Overwrites the sprite onto the current size.
      * Returns true if the overwrite was successful.

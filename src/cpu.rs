@@ -19,9 +19,22 @@ pub struct CPU {
 }
 
 impl CPU { 
-    pub fn new() -> CPU { 
-        let memory = [0x00; CPU_MEMORY];
+    
+    pub fn new(file_buffer: &[u8]) -> CPU { 
+
         let stack = [0x000; 16];
+        let mut memory = [0x00; CPU_MEMORY];
+        let i = 0;
+        let length = file_buffer.len();
+        while i < length {
+            let address = 0x200 + i;
+            if address < 4096 {
+                memory[i + 200] = file_buffer[address];
+            } else {
+                break;
+            }
+        }
+
         return CPU {
             reg_v: [0; 16],
             flag: 0, 
@@ -36,7 +49,19 @@ impl CPU {
             keyboard: Keyboard::new()
         };
     }
-    pub fn handle_opcode(&mut self, opcode: u16) -> u16 { 
+    
+
+
+    fn get_opcode(&mut self) -> u16 { 
+        let first_byte = self.memory[self.pc as usize];
+        let second_byte = self.memory[self.pc as usize +1];
+        let opcode = ((first_byte as u16) << 8) | second_byte as u16;
+        return opcode
+    }
+    // TODO: We should handle this differently.. all of this is mutation; rather we should set/get?
+    pub fn handle_opcode(&mut self) -> u16 { 
+        let opcode = self.get_opcode();
+
         let tuple_opcode = (
             (opcode & 0xf000) >> 12 as u8,
             (opcode & 0x0f00) >> 8 as u8,
