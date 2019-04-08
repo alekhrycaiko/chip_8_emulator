@@ -114,7 +114,7 @@ impl CPU {
         };
     }
     fn handle_1nnn(&mut self, opcode: u16) -> u16 {
-        self.pc = opcode & 0x0fff >> 4;
+        self.pc = opcode & 0x0fff;
         return self.pc;
     }
 
@@ -129,7 +129,7 @@ impl CPU {
     }
 
     fn handle_ret(&mut self) -> u16 {
-        self.pc = self.sp as u16;
+        self.pc = self.stack[self.sp];
         self.sp -= 1;
         return self.pc;
     }
@@ -471,7 +471,7 @@ impl CPU {
     fn handle_2nnn(&mut self, opcode: u16) -> u16 {
         self.stack[self.sp] = self.pc + 2;
         self.sp += 1;
-        self.pc = opcode;
+        self.pc = opcode & 0x0fff;
         return self.pc;
     }
 }
