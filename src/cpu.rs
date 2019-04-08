@@ -8,7 +8,7 @@ const CPU_MEMORY: usize = 4096;
 
 pub struct Output<'a> {
     pub display_memory: &'a [[u8; DISPLAY_WIDTH]; DISPLAY_HEIGHT],
-    pub flag: u8,
+    pub display_changed: bool,
 }
 
 pub struct CPU {
@@ -22,6 +22,7 @@ pub struct CPU {
     memory: [u8; CPU_MEMORY],
     keyboard: Keyboard,
     display_memory: [[u8; DISPLAY_WIDTH]; DISPLAY_HEIGHT],
+    display_changed: bool,
 }
 
 impl CPU {
@@ -48,6 +49,7 @@ impl CPU {
             memory: memory,
             keyboard: Keyboard::new(),
             display_memory: [[0; DISPLAY_WIDTH]; DISPLAY_HEIGHT],
+            display_changed: false,
         };
     }
 
@@ -55,7 +57,7 @@ impl CPU {
         self.handle_opcode();
         return Output {
             display_memory: &self.display_memory,
-            flag: self.memory[0x0f],
+            display_changed: self.display_changed,
         };
     }
 
@@ -124,6 +126,7 @@ impl CPU {
                 self.display_memory[y][x] = 0;
             }
         }
+        self.display_changed = true;
         return self.pc + 2;
     }
 
@@ -165,7 +168,7 @@ impl CPU {
         let x = get_x(opcode);
         let v_x = self.reg_v[x as usize];
         self.memory[self.reg_i] = v_x / 100;
-        self.memory[self.reg_i + 1] = (v_x / 100) % 10;
+        self.memory[self.reg_i + 1] = (v_x % 100) % 10;
         self.memory[self.reg_i + 2] = v_x % 10;
         return self.pc + 2;
     }
@@ -175,7 +178,7 @@ impl CPU {
      * The values of I and Vx are added, and the results are stored in I.
      */
     fn handle_fx1e(&mut self, opcode: u16) -> u16 {
-        let i = self.reg_i + get_x(opcode) as usize;
+        let i = self.reg_i + self.reg_v[get_x(opcode)] as usize;
         self.reg_i = i;
         return self.pc + 2;
     }
@@ -256,13 +259,15 @@ impl CPU {
         let x = (self.reg_v[get_x(opcode)] as usize) % DISPLAY_WIDTH;
         let y = (self.reg_v[get_y(opcode)] as usize) % DISPLAY_HEIGHT;
         let n = get_n(opcode);
+        self.reg_v[0x0f] = 0;
         for i in 0..n {
             for bit in 0..8 {
                 let sprite_value = (self.memory[self.reg_i + i] >> 7 - bit) & 1;
-                self.memory[0x0f] = self.display_memory[y][x] & sprite_value;
+                self.reg_v[0x0f] = self.display_memory[y][x] & sprite_value;
                 self.display_memory[y][x] ^= sprite_value;
             }
         }
+        self.display_changed = true;
         return self.pc + 2;
     }
 
@@ -312,24 +317,24 @@ impl CPU {
         let v_x = self.reg_v[get_x(opcode)] & 0b10000000;
         let most_sig_bit = v_x >> 7;
         if most_sig_bit == 1 {
-            self.memory[0x0f] = 1;
+            self.reg_v[0x0f] = 1;
         } else {
-            self.memory[0x0f] = 0;
+            self.reg_v[0x0f] = 0;
         }
         self.reg_v[get_x(opcode)] = self.reg_v[get_x(opcode)] * 2;
         return self.pc + 2;
     }
     /**
-     * If Vx > Vy, V_f is 1; otherwise V_f 0.
+     * If Vy > Vx, V_f is 1; otherwise V_f 0.
      * Then sets V_x = Vy - Vx
      */
     fn handle_8xy7(&mut self, opcode: u16) -> u16 {
         let v_y = self.reg_v[get_y(opcode)];
         let v_x = self.reg_v[get_x(opcode)];
-        if v_x > v_y {
-            self.memory[0x0f] = 1;
+        if v_y > v_x {
+            self.reg_v[0x0f] = 1;
         } else {
-            self.memory[0x0f] = 0;
+            self.reg_v[0x0f] = 0;
         }
         self.reg_v[get_x(opcode)] = v_y - v_x;
         return self.pc + 2;
@@ -343,9 +348,9 @@ impl CPU {
         let v_x = self.reg_v[get_x(opcode)];
         let least_sig_bit = v_x & 0x1;
         if least_sig_bit == 1 {
-            self.memory[0x0f] = 1;
+            self.reg_v[0x0f] = 1;
         } else {
-            self.memory[0x0f] = 0;
+            self.reg_v[0x0f] = 0;
         }
         self.reg_v[get_x(opcode)] = v_x / 2;
         return self.pc + 2;
@@ -359,9 +364,9 @@ impl CPU {
         let v_x = self.reg_v[get_x(opcode)];
         let v_y = self.reg_v[get_y(opcode)];
         if v_x > v_y {
-            self.memory[0x0f] = 1;
+            self.reg_v[0x0f] = 1;
         } else {
-            self.memory[0x0f] = 0;
+            self.reg_v[0x0f] = 0;
         }
         self.reg_v[get_x(opcode)] = v_x - v_y;
         return self.pc + 2;
@@ -374,9 +379,9 @@ impl CPU {
         let val = self.reg_v[get_x(opcode)] + self.reg_v[get_y(opcode)];
         self.reg_v[get_x(opcode)] = val & 0x0f;
         if (val as usize) > 255 {
-            self.memory[0x0f] = 1;
+            self.reg_v[0x0f] = 1;
         } else {
-            self.memory[0x0f] = 0;
+            self.reg_v[0x0f] = 0;
         }
         return self.pc + 2;
     }

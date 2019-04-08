@@ -4,10 +4,13 @@ use sdl2::keyboard::Keycode;
 use std::env;
 use std::fs::File;
 use std::io::Read;
+use std::{thread, time};
 
 mod cpu;
 mod display;
 mod keyboard;
+
+const SLEEP_TIMEOUT: std::time::Duration = time::Duration::from_millis(10);
 
 fn main() {
     let args: Vec<_> = env::args().collect();
@@ -40,10 +43,11 @@ fn main() {
             }
         }
         let result = cpu.cycle();
-        if result.flag == 1 {
-            dbg!(result.flag);
+        if result.display_changed {
             display.draw(result.display_memory);
         }
         display.canvas.present();
+
+        thread::sleep(SLEEP_TIMEOUT);
     }
 }
