@@ -6,7 +6,6 @@ const DISPLAY_WIDTH: usize = 64;
 const DISPLAY_HEIGHT: usize = 32;
 const CPU_MEMORY: usize = 4096;
 
-// output struct to help handle lifetimes.
 pub struct Output<'a> {
     pub display_memory: &'a [[u8; DISPLAY_WIDTH]; DISPLAY_HEIGHT],
     pub flag: u8,
@@ -29,16 +28,13 @@ impl CPU {
     pub fn new(file_buffer: &[u8]) -> CPU {
         let stack = [0x000; 16];
         let mut memory = [0x00; CPU_MEMORY];
-        let mut i = 0;
-        let length = file_buffer.len();
-        while i < length {
+        for (i, &byte) in file_buffer.iter().enumerate() {
             let address = 0x200 + i;
             if address < 4096 {
-                memory[address] = file_buffer[i];
+                memory[address] = byte;
             } else {
                 break;
             }
-            i = i + 1;
         }
 
         return CPU {
@@ -70,9 +66,8 @@ impl CPU {
         return opcode;
     }
 
-    pub fn handle_opcode(&mut self) -> u16 {
+    pub fn handle_opcode(&mut self) {
         let opcode = self.get_opcode();
-
         let tuple_opcode = (
             (opcode & 0xf000) >> 12 as u8,
             (opcode & 0x0f00) >> 8 as u8,
@@ -80,10 +75,9 @@ impl CPU {
             (opcode & 0x000f) as u8,
         );
 
-        return match tuple_opcode {
+        self.pc = match tuple_opcode {
             (0x0, 0x0, 0xe, 0x0) => self.handle_cls(),
             (0x0, 0x0, 0xe, 0xe) => self.handle_ret(),
-            (0x0, _, _, _) => self.handle_0nnn(opcode),
             (0x1, _, _, _) => self.handle_1nnn(opcode),
             (0x2, _, _, _) => self.handle_2nnn(opcode),
             (0x3, _, _, _) => self.handle_3xkk(opcode),
@@ -116,7 +110,7 @@ impl CPU {
             (0xf, _, 0x3, 0x3) => self.handle_fx33(opcode),
             (0xf, _, 0x5, 0x5) => self.handle_fx55(opcode),
             (0xf, _, 0x6, 0x5) => self.handle_fx65(opcode),
-            (_, _, _, _) => 2,
+            (_, _, _, _) => self.pc + 2,
         };
     }
     fn handle_1nnn(&mut self, opcode: u16) -> u16 {
@@ -124,19 +118,14 @@ impl CPU {
         return self.pc;
     }
 
-    fn handle_0nnn(&mut self, opcode: u16) -> u16 {
-        self.pc = opcode & 0x0fff >> 4;
-        return self.pc;
-    }
-
     fn handle_cls(&mut self) -> u16 {
         let memory = self.display_memory;
-        for (x, row) in memory.iter().enumerate() {
-            for (y, _) in row.iter().enumerate() {
+        for (y, col) in memory.iter().enumerate() {
+            for (x, _) in col.iter().enumerate() {
                 self.display_memory[y][x] = 0;
             }
         }
-        return 2 as u16;
+        return self.pc + 2;
     }
 
     fn handle_ret(&mut self) -> u16 {
@@ -154,7 +143,7 @@ impl CPU {
         for x in 0..(v_x + 1) {
             self.reg_v[x] = self.memory[self.reg_i + x];
         }
-        return 2;
+        return self.pc + 2;
     }
     /**
      * Store registers V0 through Vx in memory starting at location I.
@@ -165,7 +154,7 @@ impl CPU {
         for x in 0..(v_x + 1) {
             self.memory[self.reg_i + x] = self.reg_v[x];
         }
-        return 2;
+        return self.pc + 2;
     }
 
     /**
@@ -176,12 +165,12 @@ impl CPU {
     fn handle_fx33(&mut self, opcode: u16) -> u16 {
         let x = get_x(opcode);
         let v_x = self.reg_v[x as usize];
-        self.memory[self.reg_i] = v_x;
-        self.memory[self.reg_i + 1] = (v_x / 10) % 10;
-        // TODO: We should write a test against this... im not certain this is correct.
-        self.memory[self.reg_i + 2] = (v_x / 100) % 10;
-        return 2;
+        self.memory[self.reg_i] = v_x / 100;
+        self.memory[self.reg_i + 1] = (v_x / 100) % 10;
+        self.memory[self.reg_i + 2] = v_x % 10;
+        return self.pc + 2;
     }
+
     /**
      * Set I = I + Vx.
      * The values of I and Vx are added, and the results are stored in I.
@@ -189,46 +178,47 @@ impl CPU {
     fn handle_fx1e(&mut self, opcode: u16) -> u16 {
         let i = self.reg_i + get_x(opcode) as usize;
         self.reg_i = i;
-        return 2;
+        return self.pc + 2;
     }
 
     /**
      *  Set I = location of sprite for digit Vx.
+     *  Sprites are 5 bytes long
      */
     fn handle_fx29(&mut self, opcode: u16) -> u16 {
-        // TODO.
-        // Need to investigate more how my display and hexadecimal sprites will work. will come
-        // back.
         let v_x = get_x(opcode);
-        self.reg_i = v_x as usize;
-        return 2;
+        self.reg_i = v_x as usize * 5;
+        return self.pc + 2;
     }
-
+    /**
+     * Wait for a key press, store the value of the key in Vx.
+     * All execution stops until a key is pressed, then the value of that key is stored in Vx.
+     */
     fn handle_fx0a(&mut self, opcode: u16) -> u16 {
         // TODO
         self.reg_v[get_x(opcode)] = self.keyboard.block_for_input();
-        return 2;
+        return self.pc + 2;
     }
     /**
      * Set Vx to equal delay timers value
      */
     fn handle_fx07(&mut self, opcode: u16) -> u16 {
         self.reg_v[get_x(opcode)] = self.delay_timer;
-        return 2;
+        return self.pc + 2;
     }
     /**
      * Set sound timer to equal vx.
      */
     fn handle_fx18(&mut self, opcode: u16) -> u16 {
         self.sound_timer = self.reg_v[get_x(opcode)];
-        return 2;
+        return self.pc + 2;
     }
     /**
      * Set delay timer to equal vx.
      */
     fn handle_fx15(&mut self, opcode: u16) -> u16 {
         self.delay_timer = self.reg_v[get_x(opcode)];
-        return 2;
+        return self.pc + 2;
     }
     /**
      * Skip next instruction if the key/w value of Vx is not pressed.
@@ -238,7 +228,7 @@ impl CPU {
     fn handle_exa1(&mut self, opcode: u16) -> u16 {
         let is_pressed = self.keyboard.is_key_pressed(self.reg_v[get_x(opcode)]);
         if is_pressed {
-            return 2;
+            return self.pc + 2;
         }
         return 4;
     }
@@ -248,9 +238,9 @@ impl CPU {
     fn handle_ex9e(&mut self, opcode: u16) -> u16 {
         let is_pressed = self.keyboard.is_key_pressed(self.reg_v[get_x(opcode)]);
         if is_pressed {
-            return 4;
+            return self.pc + 4;
         }
-        return 2;
+        return self.pc + 2;
     }
     /**
      * Display n-byte sprite starting at memory location I, at (Vx, Vy)
@@ -274,17 +264,19 @@ impl CPU {
                 self.display_memory[y][x] ^= sprite_value;
             }
         }
-        return 2;
+        return self.pc + 2;
     }
 
     /**
      * Vx = random byte AND kk
      * random byte is a random number from
-     */
+     *  The interpreter generates a random number from 0 to 255, which is then ANDed with the value kk.
+     *  The results are stored in Vx.      
+     *  */
     fn handle_cxkk(&mut self, opcode: u16) -> u16 {
         let val: u8 = rand::thread_rng().gen();
         self.reg_v[get_x(opcode)] = val & get_kk(opcode) as u8;
-        return 2;
+        return self.pc + 2;
     }
     /**
      * Jump to locatin nnn + v0
@@ -301,7 +293,7 @@ impl CPU {
     fn handle_annn(&mut self, opcode: u16) -> u16 {
         let nnn = get_nnn(opcode);
         self.reg_i = nnn;
-        return 2;
+        return self.pc + 2;
     }
 
     /**
@@ -309,24 +301,24 @@ impl CPU {
      */
     fn handle_9xy0(&mut self, opcode: u16) -> u16 {
         if self.reg_v[get_x(opcode)] != self.reg_v[get_y(opcode)] {
-            return 4;
+            return self.pc + 4;
         }
-        return 2;
+        return self.pc + 2;
     }
     /**
      * If the most significant bit of Vx is 1, then set V_f to 1. Otherwise 0.
      * V_x following this is also multipled by 2.
      */
     fn handle_8xye(&mut self, opcode: u16) -> u16 {
-        let v_x = self.reg_v[get_x(opcode)];
+        let v_x = self.reg_v[get_x(opcode)] & 0b10000000;
         let most_sig_bit = v_x >> 7;
         if most_sig_bit == 1 {
             self.memory[0x0f] = 1;
         } else {
             self.memory[0x0f] = 0;
         }
-        self.reg_v[get_x(opcode)] = v_x * 2;
-        return 2;
+        self.reg_v[get_x(opcode)] *= 2;
+        return self.pc + 2;
     }
     /**
      * If Vx > Vy, V_f is 1; otherwise V_f 0.
@@ -341,7 +333,7 @@ impl CPU {
             self.memory[0x0f] = 0;
         }
         self.reg_v[get_x(opcode)] = v_y - v_x;
-        return 2;
+        return self.pc + 2;
     }
     /**
      * If lesat significant bit of V_x is 1; then V_f is 1.
@@ -357,7 +349,7 @@ impl CPU {
             self.memory[0x0f] = 0;
         }
         self.reg_v[get_x(opcode)] = v_x / 2;
-        return 2;
+        return self.pc + 2;
     }
     /**
      * If V_x > V_y then V_flag = 1
@@ -367,13 +359,13 @@ impl CPU {
     fn handle_8xy5(&mut self, opcode: u16) -> u16 {
         let v_x = self.reg_v[get_x(opcode)];
         let v_y = self.reg_v[get_y(opcode)];
-        if v_x == v_y {
+        if v_x > v_y {
             self.memory[0x0f] = 1;
         } else {
             self.memory[0x0f] = 0;
         }
         self.reg_v[get_x(opcode)] = v_x - v_y;
-        return 2;
+        return self.pc + 2;
     }
     /**
      * Vx = Vx + Vy
@@ -387,21 +379,21 @@ impl CPU {
         } else {
             self.memory[0x0f] = 0;
         }
-        return 2;
+        return self.pc + 2;
     }
     /**
      * Vx = XOR Vx Vy
      */
     fn handle_8xy3(&mut self, opcode: u16) -> u16 {
         self.reg_v[get_x(opcode)] ^= self.reg_v[get_y(opcode)];
-        return 2;
+        return self.pc + 2;
     }
     /**
      * Vx = Vx AND Vy
      */
     fn handle_8xy2(&mut self, opcode: u16) -> u16 {
         self.reg_v[get_x(opcode)] &= self.reg_v[get_y(opcode)];
-        return 2;
+        return self.pc + 2;
     }
     /**
     Set Vx = Vx OR Vy.
@@ -409,7 +401,7 @@ impl CPU {
     */
     fn handle_8xy1(&mut self, opcode: u16) -> u16 {
         self.reg_v[get_x(opcode)] |= self.reg_v[get_y(opcode)];
-        return 2;
+        return self.pc + 2;
     }
     /**
      * Set Vx = Vy.
@@ -417,15 +409,16 @@ impl CPU {
      */
     fn handle_8xy0(&mut self, opcode: u16) -> u16 {
         self.reg_v[get_x(opcode)] = self.reg_v[get_y(opcode)];
-        return 2;
+        return self.pc + 2;
     }
     /**
      * Set Vx = Vx + kk.
-     * Adds the value kk to the value of register Vx, then stores the result in
+     * Adds the value kk to the value of register Vx, then stores the result in V_x
      */
     fn handle_7xkk(&mut self, opcode: u16) -> u16 {
-        self.reg_v[get_x(opcode)] += get_kk(opcode) as u8;
-        return 2;
+        let result = get_kk(opcode) as u16 + self.reg_v[get_x(opcode)] as u16;
+        self.reg_v[get_x(opcode)] = result as u8;
+        return self.pc + 2;
     }
     /**
      * Set Vx = kk.
@@ -433,7 +426,7 @@ impl CPU {
      */
     fn handle_6xkk(&mut self, opcode: u16) -> u16 {
         self.reg_v[get_x(opcode)] = get_kk(opcode) as u8;
-        return 2;
+        return self.pc + 2;
     }
     /**
      * Skip next instruction if Vx = Vy.
@@ -441,9 +434,9 @@ impl CPU {
      **/
     fn handle_5xy0(&mut self, opcode: u16) -> u16 {
         if self.reg_v[get_x(opcode)] == self.reg_v[get_y(opcode)] {
-            return 4;
+            return self.pc + 4;
         }
-        return 2;
+        return self.pc + 2;
     }
     /**
     * Skip next instruction if Vx != kk.
@@ -453,9 +446,9 @@ impl CPU {
         let kk = get_kk(opcode);
         let x = get_x(opcode);
         if self.reg_v[x] as usize == kk {
-            return 2;
+            return self.pc + 2;
         }
-        return 4;
+        return self.pc + 4;
     }
     /*
      * Skip next instruction if Vx = kk.
@@ -465,11 +458,11 @@ impl CPU {
         let kk = (opcode & 0x00ff) as u8;
         let x = opcode & 0x0f00 >> 8;
         let vx = self.reg_v[x as usize] as u8;
+        // TODO: review here.
         if vx == kk {
-            self.pc += 2;
-            return 2;
+            return self.pc + 4;
         }
-        return 0;
+        return self.pc + 2;
     }
     /**
     * Call subroutine at nnn.

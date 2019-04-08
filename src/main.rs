@@ -40,10 +40,10 @@ fn main() {
             }
         }
         let result = cpu.cycle();
-        println!("{}", result.flag);
-        //        if result.flag == 1 {
-        display.draw(result.display_memory);
+        if result.flag == 1 {
+            dbg!(result.flag);
+            display.draw(result.display_memory);
+        }
         display.canvas.present();
-        //      }
     }
 }
