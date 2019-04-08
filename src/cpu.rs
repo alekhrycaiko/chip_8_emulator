@@ -74,7 +74,6 @@ impl CPU {
             (opcode & 0x00f0) >> 4 as u8,
             (opcode & 0x000f) as u8,
         );
-
         self.pc = match tuple_opcode {
             (0x0, 0x0, 0xe, 0x0) => self.handle_cls(),
             (0x0, 0x0, 0xe, 0xe) => self.handle_ret(),
@@ -129,8 +128,8 @@ impl CPU {
     }
 
     fn handle_ret(&mut self) -> u16 {
-        self.pc = self.stack[self.sp];
         self.sp -= 1;
+        self.pc = self.stack[self.sp];
         return self.pc;
     }
     /**
@@ -317,7 +316,7 @@ impl CPU {
         } else {
             self.memory[0x0f] = 0;
         }
-        self.reg_v[get_x(opcode)] *= 2;
+        self.reg_v[get_x(opcode)] = self.reg_v[get_x(opcode)] * 2;
         return self.pc + 2;
     }
     /**
@@ -456,9 +455,7 @@ impl CPU {
      */
     fn handle_3xkk(&mut self, opcode: u16) -> u16 {
         let kk = (opcode & 0x00ff) as u8;
-        let x = opcode & 0x0f00 >> 8;
-        let vx = self.reg_v[x as usize] as u8;
-        // TODO: review here.
+        let vx = self.reg_v[get_x(opcode)] as u8;
         if vx == kk {
             return self.pc + 4;
         }
