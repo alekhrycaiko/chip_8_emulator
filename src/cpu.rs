@@ -294,7 +294,7 @@ impl CPU {
         return self.pc + 2;
     }
     /**
-     * Jump to locatin nnn + v0
+     * Jump to location nnn + v0
      */
     fn handle_bnnn(&mut self, opcode: u16) -> u16 {
         let pc = self.reg_v[0] as u16 + get_nnn(opcode) as u16;

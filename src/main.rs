@@ -26,11 +26,9 @@ fn main() {
     file.read_to_end(&mut buffer).unwrap();
     let mut cpu = cpu::CPU::new(&buffer);
     let mut display = display::Display::new();
-    let mut i = 0;
     let sdl_context = &display.sdl_context;
     let mut event_pump = sdl_context.event_pump().unwrap();
     'main_loop: loop {
-        i = (i + 1) % 255;
         display.canvas.clear();
         for event in event_pump.poll_iter() {
             match event {
@@ -46,7 +44,6 @@ fn main() {
         if result.display_changed {
             display.draw(result.display_memory);
         }
-        display.canvas.present();
 
         thread::sleep(SLEEP_TIMEOUT);
     }

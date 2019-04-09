@@ -6,8 +6,8 @@ use sdl2::render::Canvas;
 const WINDOW_NAME: &str = "CHIP8";
 
 const SCALE: u32 = 10;
-const WINDOW_WIDTH: u32 = 100 * SCALE;
-const WINDOW_HEIGHT: u32 = 70 * SCALE;
+const WINDOW_WIDTH: u32 = 64 * SCALE;
+const WINDOW_HEIGHT: u32 = 32 * SCALE;
 
 const RED: u8 = 0;
 const BLUE: u8 = 0;
