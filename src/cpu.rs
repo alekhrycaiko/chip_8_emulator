@@ -55,6 +55,13 @@ impl CPU {
 
     pub fn cycle(&mut self) -> Output {
         self.handle_opcode();
+        if self.delay_timer > 0 {
+            self.delay_timer -= 1;
+        }
+        if self.sound_timer > 0 {
+            self.sound_timer -= 1;
+        }
+
         return Output {
             display_memory: &self.display_memory,
             display_changed: self.display_changed,
@@ -192,6 +199,7 @@ impl CPU {
         self.reg_i = v_x as usize * 5;
         return self.pc + 2;
     }
+
     /**
      * Wait for a key press, store the value of the key in Vx.
      * All execution stops until a key is pressed, then the value of that key is stored in Vx.
@@ -201,6 +209,7 @@ impl CPU {
         self.reg_v[get_x(opcode)] = self.keyboard.block_for_input();
         return self.pc + 2;
     }
+
     /**
      * Set Vx to equal delay timers value
      */
@@ -208,6 +217,7 @@ impl CPU {
         self.reg_v[get_x(opcode)] = self.delay_timer;
         return self.pc + 2;
     }
+
     /**
      * Set sound timer to equal vx.
      */
@@ -215,6 +225,7 @@ impl CPU {
         self.sound_timer = self.reg_v[get_x(opcode)];
         return self.pc + 2;
     }
+
     /**
      * Set delay timer to equal vx.
      */
@@ -286,17 +297,14 @@ impl CPU {
      * Jump to locatin nnn + v0
      */
     fn handle_bnnn(&mut self, opcode: u16) -> u16 {
-        let v0 = self.reg_v[0];
-        let nnn = get_nnn(opcode);
-        let pc = v0 as u16 + nnn as u16;
+        let pc = self.reg_v[0] as u16 + get_nnn(opcode) as u16;
         return pc;
     }
     /**
      * Set value of register I to NNN
      */
     fn handle_annn(&mut self, opcode: u16) -> u16 {
-        let nnn = get_nnn(opcode);
-        self.reg_i = nnn;
+        self.reg_i = get_nnn(opcode);
         return self.pc + 2;
     }
 
@@ -340,7 +348,7 @@ impl CPU {
         return self.pc + 2;
     }
     /**
-     * If lesat significant bit of V_x is 1; then V_f is 1.
+     * If least significant bit of V_x is 1; then V_f is 1.
      * Otherwise, v_f is 0;
      * V_x is then divided by 2 and saved.
      */
@@ -377,7 +385,7 @@ impl CPU {
      */
     fn handle_8xy4(&mut self, opcode: u16) -> u16 {
         let val = self.reg_v[get_x(opcode)] + self.reg_v[get_y(opcode)];
-        self.reg_v[get_x(opcode)] = val & 0x0f;
+        self.reg_v[get_x(opcode)] = val;
         if (val as usize) > 255 {
             self.reg_v[0x0f] = 1;
         } else {
