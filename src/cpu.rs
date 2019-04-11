@@ -269,61 +269,6 @@ impl CPU {
         }
         return 4;
     }
-    /**
-     * Skip next instr if key with value of Vx is pressed.
-     */
-    fn handle_ex9e(&mut self, opcode: u16) -> u16 {
-        let is_pressed = self.keyboard.is_key_pressed(self.reg_v[get_x(opcode)]);
-        if is_pressed {
-            return self.pc + 4;
-        }
-        return self.pc + 2;
-    }
-    /**
-     * Display n-byte sprite starting at memory location I, at (Vx, Vy)
-     * Set V_f = collision
-     * Interpreter should read  n bytes from memory starting at I.
-     * These bytes are displayed as sprites on the screen at (Vx, Vy)
-     * Sprites are XORed onto the screen.
-     * If any pixels are erased in this XOR; set V_f to 1. Otherwise V_f is 0
-     * If the sprite is positioned outside of the display; a wrap around
-     * to the other side should occur.
-     *
-     */
-    fn handle_dxyn(&mut self, opcode: u16) -> u16 {
-        let x = (self.reg_v[get_x(opcode)] as usize) % DISPLAY_WIDTH;
-        let y = (self.reg_v[get_y(opcode)] as usize) % DISPLAY_HEIGHT;
-        let n = get_n(opcode);
-        self.reg_v[0x0f] = 0;
-        for i in 0..n {
-            for bit in 0..8 {
-                let sprite_value = (self.memory[self.reg_i + i] >> 7 - bit) & 1;
-                self.reg_v[0x0f] = self.display_memory[y][x] & sprite_value;
-                self.display_memory[y][x] ^= sprite_value;
-            }
-        }
-        self.display_changed = true;
-        return self.pc + 2;
-    }
-
-    /**
-     * Vx = random byte AND kk
-     * random byte is a random number from
-     *  The interpreter generates a random number from 0 to 255, which is then ANDed with the value kk.
-     *  The results are stored in Vx.      
-     *  */
-    fn handle_cxkk(&mut self, opcode: u16) -> u16 {
-        let val: u8 = rand::thread_rng().gen();
-        self.reg_v[get_x(opcode)] = val & get_kk(opcode) as u8;
-        return self.pc + 2;
-    }
-    /**
-     * Jump to location nnn + v0
-     */
-    fn handle_bnnn(&mut self, opcode: u16) -> u16 {
-        let pc = self.reg_v[0] as u16 + get_nnn(opcode) as u16;
-        return pc;
-    }
 
     /**
     * Call subroutine at nnn.
@@ -520,6 +465,62 @@ impl CPU {
         self.reg_i = get_nnn(opcode);
         return self.pc + 2;
     }
+    /**
+     * Jump to location nnn + v0
+     */
+    fn handle_bnnn(&mut self, opcode: u16) -> u16 {
+        let pc = (self.reg_v[0] as usize) + get_nnn(opcode);
+        return pc as u16;
+    }
+
+    /**
+     * Vx = random byte AND kk
+     * random byte is a random number from
+     *  The interpreter generates a random number from 0 to 255, which is then ANDed with the value kk.
+     *  The results are stored in Vx.      
+     *  */
+    fn handle_cxkk(&mut self, opcode: u16) -> u16 {
+        let val: u8 = rand::thread_rng().gen();
+        self.reg_v[get_x(opcode)] = val & get_kk(opcode) as u8;
+        return self.pc + 2;
+    }
+    /**
+     * Display n-byte sprite starting at memory location I, at (Vx, Vy)
+     * Set V_f = collision
+     * Interpreter should read  n bytes from memory starting at I.
+     * These bytes are displayed as sprites on the screen at (Vx, Vy)
+     * Sprites are XORed onto the screen.
+     * If any pixels are erased in this XOR; set V_f to 1. Otherwise V_f is 0
+     * If the sprite is positioned outside of the display; a wrap around
+     * to the other side should occur.
+     *
+     */
+    fn handle_dxyn(&mut self, opcode: u16) -> u16 {
+        let x = (self.reg_v[get_x(opcode)] as usize) % DISPLAY_WIDTH;
+        let y = (self.reg_v[get_y(opcode)] as usize) % DISPLAY_HEIGHT;
+        let n = get_n(opcode);
+        self.reg_v[0x0f] = 0;
+        for i in 0..n {
+            for bit in 0..8 {
+                let sprite_value = (self.memory[self.reg_i + i] >> 7 - bit) & 1;
+                self.reg_v[0x0f] = self.display_memory[y][x] & sprite_value;
+                self.display_memory[y][x] ^= sprite_value;
+            }
+        }
+        self.display_changed = true;
+        return self.pc + 2;
+    }
+
+    /**
+     * Skip next instr if key with value of Vx is pressed.
+     */
+    fn handle_ex9e(&mut self, opcode: u16) -> u16 {
+        let is_pressed = self.keyboard.is_key_pressed(self.reg_v[get_x(opcode)]);
+        if is_pressed {
+            return self.pc + 4;
+        }
+        return self.pc + 2;
+    }
 }
 
 fn get_nnn(opcode: u16) -> usize {
@@ -659,6 +660,22 @@ mod tests {
         assert_eq!(cpu.reg_v[1], 1);
         assert_eq!(cpu.reg_v[0x0f], 1);
     }
+
+    #[test]
+    fn test_handle_8xye() {
+        let mut cpu = CPU::new();
+        let opcode = 0x812e;
+        cpu.reg_v[1] = 0x11;
+        cpu.handle_opcode(opcode);
+        assert_eq!(cpu.reg_v[1], 0x11 << 1);
+        assert_eq!(cpu.reg_v[0x0f], 0);
+        assert_eq!(cpu.pc, 2);
+        cpu = CPU::new();
+        let opcode = 0x812e;
+        cpu.reg_v[1] = 0b111111;
+        cpu.handle_opcode(opcode);
+    }
+
     #[test]
     fn test_handle_9xy0() {
         let mut cpu = CPU::new();
@@ -680,5 +697,27 @@ mod tests {
         cpu.handle_opcode(opcode);
         assert_eq!(cpu.pc, 2);
         assert_eq!(cpu.reg_i, 0x111);
+    }
+    #[test]
+    fn test_handle_bnnn() {
+        let mut cpu = CPU::new();
+        let opcode = 0xb111;
+        cpu.reg_v[0] = 0x11;
+        cpu.handle_opcode(opcode);
+        let result = (0x11 as usize) + (0x111 & 0xfff) as usize;
+        assert_eq!(cpu.pc, result as u16);
+    }
+    #[test]
+    fn test_handle_cxkk() {
+        let mut cpu = CPU::new();
+        let opcode = 0xc100;
+        cpu.reg_v[1] = 0x11;
+        cpu.handle_opcode(opcode);
+        assert_eq!(cpu.reg_v[1], 0);
+        cpu = CPU::new();
+        let opcode = 0xc111;
+        cpu.reg_v[1] = 0x11;
+        cpu.handle_opcode(opcode);
+        assert_ne!(cpu.reg_v[1], 0);
     }
 }
