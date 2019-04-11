@@ -44,25 +44,13 @@ pub struct CPU {
 }
 
 impl CPU {
-    pub fn new(file_buffer: &[u8]) -> CPU {
+    pub fn new() -> CPU {
         let stack = [0x000; 16];
         let mut memory = [0x00; CPU_MEMORY];
-
         let font_set = FontSet::new();
-
         for i in 0..font_set.set.len() {
             memory[i] = font_set.set[i];
         }
-
-        for (i, &byte) in file_buffer.iter().enumerate() {
-            let address = 0x200 + i;
-            if address < 4096 {
-                memory[address] = byte;
-            } else {
-                break;
-            }
-        }
-
         return CPU {
             reg_v: [0; 16],
             reg_i: 0,
@@ -78,8 +66,20 @@ impl CPU {
         };
     }
 
+    pub fn load_memory(&mut self, file_buffer: &[u8]) {
+        for (i, &byte) in file_buffer.iter().enumerate() {
+            let address = 0x200 + i;
+            if address < 4096 {
+                self.memory[address] = byte;
+            } else {
+                break;
+            }
+        }
+    }
+
     pub fn cycle(&mut self) -> Output {
-        self.handle_opcode();
+        let opcode = self.get_opcode();
+        self.handle_opcode(opcode);
         if self.delay_timer > 0 {
             self.delay_timer -= 1;
         }
@@ -100,8 +100,7 @@ impl CPU {
         return opcode;
     }
 
-    pub fn handle_opcode(&mut self) {
-        let opcode = self.get_opcode();
+    pub fn handle_opcode(&mut self, opcode: u16) {
         let tuple_opcode = (
             (opcode & 0xf000) >> 12 as u8,
             (opcode & 0x0f00) >> 8 as u8,
@@ -343,21 +342,6 @@ impl CPU {
         return self.pc + 2;
     }
     /**
-     * If the most significant bit of Vx is 1, then set V_f to 1. Otherwise 0.
-     * V_x following this is also multipled by 2.
-     */
-    fn handle_8xye(&mut self, opcode: u16) -> u16 {
-        let v_x = self.reg_v[get_x(opcode)] & 0b10000000;
-        let most_sig_bit = v_x >> 7;
-        if most_sig_bit == 1 {
-            self.reg_v[0x0f] = 1;
-        } else {
-            self.reg_v[0x0f] = 0;
-        }
-        self.reg_v[get_x(opcode)] = self.reg_v[get_x(opcode)] * 2;
-        return self.pc + 2;
-    }
-    /**
      * If Vy > Vx, V_f is 1; otherwise V_f 0.
      * Then sets V_x = Vy - Vx
      */
@@ -372,105 +356,26 @@ impl CPU {
         self.reg_v[get_x(opcode)] = v_y - v_x;
         return self.pc + 2;
     }
+
     /**
-     * If least significant bit of V_x is 1; then V_f is 1.
-     * Otherwise, v_f is 0;
-     * V_x is then divided by 2 and saved.
-     */
-    fn handle_8xy6(&mut self, opcode: u16) -> u16 {
-        let v_x = self.reg_v[get_x(opcode)];
-        let least_sig_bit = v_x & 0x1;
-        if least_sig_bit == 1 {
-            self.reg_v[0x0f] = 1;
-        } else {
-            self.reg_v[0x0f] = 0;
-        }
-        self.reg_v[get_x(opcode)] = v_x / 2;
-        return self.pc + 2;
-    }
-    /**
-     * If V_x > V_y then V_flag = 1
-     * Otherwise v_flag = 0
-     * Then sets V_x = V_x - V_y
-     */
-    fn handle_8xy5(&mut self, opcode: u16) -> u16 {
-        let v_x = self.reg_v[get_x(opcode)];
-        let v_y = self.reg_v[get_y(opcode)];
-        if v_x > v_y {
-            self.reg_v[0x0f] = 1;
-        } else {
-            self.reg_v[0x0f] = 0;
-        }
-        self.reg_v[get_x(opcode)] = v_x - v_y;
-        return self.pc + 2;
-    }
-    /**
-     * Vx = Vx + Vy
-     * set Vf = carry
-     */
-    fn handle_8xy4(&mut self, opcode: u16) -> u16 {
-        let val = self.reg_v[get_x(opcode)] + self.reg_v[get_y(opcode)];
-        self.reg_v[get_x(opcode)] = val;
-        if (val as usize) > 255 {
-            self.reg_v[0x0f] = 1;
-        } else {
-            self.reg_v[0x0f] = 0;
-        }
-        return self.pc + 2;
-    }
-    /**
-     * Vx = XOR Vx Vy
-     */
-    fn handle_8xy3(&mut self, opcode: u16) -> u16 {
-        self.reg_v[get_x(opcode)] ^= self.reg_v[get_y(opcode)];
-        return self.pc + 2;
-    }
-    /**
-     * Vx = Vx AND Vy
-     */
-    fn handle_8xy2(&mut self, opcode: u16) -> u16 {
-        self.reg_v[get_x(opcode)] &= self.reg_v[get_y(opcode)];
-        return self.pc + 2;
-    }
-    /**
-    Set Vx = Vx OR Vy.
-    Performs a bitwise OR on the values of Vx and Vy, then stores the result in Vx.
+    * Call subroutine at nnn.
+    The interpreter increments the stack pointer, then puts the current PC on the top of the stack. The PC is then set to nnn.
     */
-    fn handle_8xy1(&mut self, opcode: u16) -> u16 {
-        self.reg_v[get_x(opcode)] |= self.reg_v[get_y(opcode)];
-        return self.pc + 2;
+    fn handle_2nnn(&mut self, opcode: u16) -> u16 {
+        println!("hit 2nnn");
+        self.stack[self.sp] = self.pc + 2;
+        self.sp += 1;
+        self.pc = get_nnn(opcode) as u16;
+        return self.pc;
     }
-    /**
-     * Set Vx = Vy.
-     * Stores the value of register Vy in register Vx.
+    /*
+     * Skip next instruction if Vx = kk.
+     * The interpreter compares register Vx to kk, and if they are equal, increments the program counter by 2.
      */
-    fn handle_8xy0(&mut self, opcode: u16) -> u16 {
-        self.reg_v[get_x(opcode)] = self.reg_v[get_y(opcode)];
-        return self.pc + 2;
-    }
-    /**
-     * Set Vx = Vx + kk.
-     * Adds the value kk to the value of register Vx, then stores the result in V_x
-     */
-    fn handle_7xkk(&mut self, opcode: u16) -> u16 {
-        let result = get_kk(opcode) as u16 + self.reg_v[get_x(opcode)] as u16;
-        self.reg_v[get_x(opcode)] = result as u8;
-        return self.pc + 2;
-    }
-    /**
-     * Set Vx = kk.
-     * The interpreter puts the value kk into register Vx.
-     */
-    fn handle_6xkk(&mut self, opcode: u16) -> u16 {
-        self.reg_v[get_x(opcode)] = get_kk(opcode) as u8;
-        return self.pc + 2;
-    }
-    /**
-     * Skip next instruction if Vx = Vy.
-     * The interpreter compares register Vx to register Vy, and if they are equal, increments the program counter by 2.
-     **/
-    fn handle_5xy0(&mut self, opcode: u16) -> u16 {
-        if self.reg_v[get_x(opcode)] == self.reg_v[get_y(opcode)] {
+    fn handle_3xkk(&mut self, opcode: u16) -> u16 {
+        let kk = (opcode & 0x00ff) as u8;
+        let vx = self.reg_v[get_x(opcode)] as u8;
+        if vx == kk {
             return self.pc + 4;
         }
         return self.pc + 2;
@@ -487,27 +392,131 @@ impl CPU {
         }
         return self.pc + 4;
     }
-    /*
-     * Skip next instruction if Vx = kk.
-     * The interpreter compares register Vx to kk, and if they are equal, increments the program counter by 2.
-     */
-    fn handle_3xkk(&mut self, opcode: u16) -> u16 {
-        let kk = (opcode & 0x00ff) as u8;
-        let vx = self.reg_v[get_x(opcode)] as u8;
-        if vx == kk {
+    /**
+     * Skip next instruction if Vx = Vy.
+     * The interpreter compares register Vx to register Vy, and if they are equal, increments the program counter by 2.
+     **/
+    fn handle_5xy0(&mut self, opcode: u16) -> u16 {
+        if self.reg_v[get_x(opcode)] == self.reg_v[get_y(opcode)] {
             return self.pc + 4;
         }
         return self.pc + 2;
     }
+
     /**
-    * Call subroutine at nnn.
-    The interpreter increments the stack pointer, then puts the current PC on the top of the stack. The PC is then set to nnn.
+     * Set Vx = kk.
+     * The interpreter puts the value kk into register Vx.
+     */
+    fn handle_6xkk(&mut self, opcode: u16) -> u16 {
+        self.reg_v[get_x(opcode)] = get_kk(opcode) as u8;
+        return self.pc + 2;
+    }
+
+    /**
+     * Set Vx = Vx + kk.
+     * Adds the value kk to the value of register Vx, then stores the result in V_x
+     */
+    fn handle_7xkk(&mut self, opcode: u16) -> u16 {
+        let result = get_kk(opcode) as u16 + self.reg_v[get_x(opcode)] as u16;
+        self.reg_v[get_x(opcode)] = result as u8;
+        return self.pc + 2;
+    }
+
+    /**
+     * Set Vx = Vy.
+     * Stores the value of register Vy in register Vx.
+     */
+    fn handle_8xy0(&mut self, opcode: u16) -> u16 {
+        self.reg_v[get_x(opcode)] = self.reg_v[get_y(opcode)];
+        return self.pc + 2;
+    }
+
+    /**
+    Set Vx = Vx OR Vy.
+    Performs a bitwise OR on the values of Vx and Vy, then stores the result in Vx.
     */
-    fn handle_2nnn(&mut self, opcode: u16) -> u16 {
-        self.stack[self.sp] = self.pc + 2;
-        self.sp += 1;
-        self.pc = opcode & 0x0fff;
-        return self.pc;
+    fn handle_8xy1(&mut self, opcode: u16) -> u16 {
+        self.reg_v[get_x(opcode)] |= self.reg_v[get_y(opcode)];
+        return self.pc + 2;
+    }
+
+    /**
+     * Vx = Vx AND Vy
+     */
+    fn handle_8xy2(&mut self, opcode: u16) -> u16 {
+        self.reg_v[get_x(opcode)] &= self.reg_v[get_y(opcode)];
+        return self.pc + 2;
+    }
+    /**
+     * Vx = XOR Vx Vy
+     */
+    fn handle_8xy3(&mut self, opcode: u16) -> u16 {
+        self.reg_v[get_x(opcode)] ^= self.reg_v[get_y(opcode)];
+        return self.pc + 2;
+    }
+    /**
+     * Vx = Vx + Vy
+     * If Vx > 255, set V_f to 1, otherwise set to 0.
+     * Of the result, save only the top 8 bits.
+     */
+    fn handle_8xy4(&mut self, opcode: u16) -> u16 {
+        let val = self.reg_v[get_x(opcode)] as u16 + self.reg_v[get_y(opcode)] as u16;
+        if (val as usize) > 255 {
+            self.reg_v[0x0f] = 1;
+        } else {
+            self.reg_v[0x0f] = 0;
+        }
+        self.reg_v[get_x(opcode)] = val as u8;
+        return self.pc + 2;
+    }
+    /**
+     * If V_x > V_y then V_flag = 1
+     * Otherwise v_flag = 0
+     * Then sets V_x = V_x - V_y
+     */
+    fn handle_8xy5(&mut self, opcode: u16) -> u16 {
+        let v_x = self.reg_v[get_x(opcode)];
+        let v_y = self.reg_v[get_y(opcode)];
+        if v_x > v_y {
+            self.reg_v[0x0f] = 1;
+        } else {
+            self.reg_v[0x0f] = 0;
+        }
+        self.reg_v[get_x(opcode)] = v_x.wrapping_sub(v_y);
+        return self.pc + 2;
+    }
+
+    /**
+     * If least significant bit of V_x is 1; then V_f is 1.
+     * Otherwise, v_f is 0;
+     * V_x is then divided by 2 and saved.
+     */
+    fn handle_8xy6(&mut self, opcode: u16) -> u16 {
+        let v_x = self.reg_v[get_x(opcode)];
+        let least_sig_bit = v_x & 0x1;
+        if least_sig_bit == 1 {
+            self.reg_v[0x0f] = 1;
+        } else {
+            self.reg_v[0x0f] = 0;
+        }
+        self.reg_v[get_x(opcode)] = v_x >> 1;
+        return self.pc + 2;
+    }
+
+    /**
+     * If the most significant bit of Vx is 1, then set V_f to 1. Otherwise 0.
+     * V_x following this is also multipled by 2.
+     */
+    fn handle_8xye(&mut self, opcode: u16) -> u16 {
+        let v_x = self.reg_v[get_x(opcode)] & 0b10000000;
+        let most_sig_bit = v_x >> 7;
+        if most_sig_bit == 1 {
+            self.reg_v[0x0f] = 1;
+        } else {
+            self.reg_v[0x0f] = 0;
+        }
+        self.reg_v[get_x(opcode)] = self.reg_v[get_x(opcode)] << 1;
+        return self.pc + 2;
     }
 }
 
@@ -518,7 +527,7 @@ fn get_nnn(opcode: u16) -> usize {
  * Returns the integer representation of x from the u16.
  */
 fn get_x(opcode: u16) -> usize {
-    return (opcode & 0x0f00 >> 8) as usize;
+    return ((opcode & 0x0f00) >> 8) as usize;
 }
 /**
 * Returns the integer representation of kk from the u16.
@@ -528,7 +537,7 @@ fn get_kk(opcode: u16) -> usize {
 }
 
 fn get_y(opcode: u16) -> usize {
-    return (opcode & 0x00f0 > 4) as usize;
+    return ((opcode & 0x00f0) >> 4) as usize;
 }
 fn get_n(opcode: u16) -> usize {
     return (opcode & 0x000f) as usize;
@@ -536,9 +545,98 @@ fn get_n(opcode: u16) -> usize {
 
 #[cfg(test)]
 mod tests {
-    // TODO write tests for the above functions.
+    use super::*;
+
+    // TODO we should assert PC for all the tests.
     #[test]
-    fn test_get_n() {
-        assert_eq!(2 + 2, 4);
+    fn test_handle_2nnn() {
+        let mut cpu = CPU::new();
+        let opcode = 0x2111;
+        cpu.handle_opcode(opcode);
+        assert_eq!(cpu.pc, 0x111 as u16);
+    }
+    #[test]
+    fn test_handle_3xkk() {
+        let mut cpu = CPU::new();
+        let opcode = 0x3122;
+        cpu.handle_opcode(opcode);
+        assert_eq!(cpu.pc, 2 as u16);
+    }
+    #[test]
+    fn test_handle_4xkk() {
+        let mut cpu = CPU::new();
+        let opcode = 0x4122;
+        cpu.handle_opcode(opcode);
+        assert_eq!(cpu.pc, 4 as u16);
+    }
+    #[test]
+    fn test_handle_5xy0() {
+        let mut cpu = CPU::new();
+        let opcode = 0x5000;
+        cpu.handle_opcode(opcode);
+        assert_eq!(cpu.pc, 4 as u16);
+    }
+    #[test]
+    fn test_handle_6xkk() {
+        let mut cpu = CPU::new();
+        let opcode = 0x6666;
+        cpu.handle_opcode(opcode);
+        assert_eq!(cpu.reg_v[6], get_kk(opcode) as u8);
+    }
+    #[test]
+    fn test_handle_7xkk() {
+        let mut cpu = CPU::new();
+        let opcode = 0x7777;
+        cpu.reg_v[7] = 0x1;
+        cpu.handle_opcode(opcode);
+        assert_eq!(cpu.reg_v[7], get_kk(opcode) as u8 + 0x1);
+    }
+    #[test]
+    fn test_handle_8xy0() {
+        let mut cpu = CPU::new();
+        let opcode = 0x8120;
+        cpu.reg_v[2] = 0x5;
+        cpu.handle_opcode(opcode);
+        assert_eq!(cpu.reg_v[1], 0x5);
+    }
+    #[test]
+    fn test_handle_8xy1() {
+        let mut cpu = CPU::new();
+        let opcode = 0x8121;
+        cpu.reg_v[1] = 0x11;
+        cpu.reg_v[2] = 0x10;
+        cpu.handle_opcode(opcode);
+        assert_eq!(cpu.reg_v[1], 0x11);
+    }
+    #[test]
+    fn test_handle_8xy2() {
+        let mut cpu = CPU::new();
+        let opcode = 0x8122;
+        cpu.reg_v[1] = 0x11;
+        cpu.reg_v[2] = 0x10;
+        cpu.handle_opcode(opcode);
+        assert_eq!(cpu.reg_v[1], 0x10);
+    }
+    #[test]
+    fn test_handle_8xy3() {
+        let mut cpu = CPU::new();
+        let opcode = 0x8123;
+        cpu.reg_v[1] = 0x11;
+        cpu.reg_v[2] = 0x10;
+        cpu.handle_opcode(opcode);
+        assert_eq!(cpu.reg_v[1], 0x01);
+    }
+    #[test]
+    fn test_handle_8xy4() {
+        let mut cpu = CPU::new();
+        let opcode = 0x8123;
+        cpu.reg_v[1] = 0x11;
+        cpu.reg_v[2] = 0x10;
+        cpu.handle_opcode(opcode);
+        assert_eq!(cpu.reg_v[1], 0x01);
+    }
+    #[test]
+    fn test_handle_8xy5() {
+        let mut cpu = CPU::new();
     }
 }

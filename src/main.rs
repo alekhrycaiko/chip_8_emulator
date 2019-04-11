@@ -24,7 +24,8 @@ fn main() {
     };
     let mut buffer = Vec::new();
     file.read_to_end(&mut buffer).unwrap();
-    let mut cpu = cpu::CPU::new(&buffer);
+    let mut cpu = cpu::CPU::new();
+    cpu.load_memory(&buffer);
     let mut display = display::Display::new();
     let sdl_context = &display.sdl_context;
     let mut event_pump = sdl_context.event_pump().unwrap();
