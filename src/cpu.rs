@@ -324,38 +324,6 @@ impl CPU {
         let pc = self.reg_v[0] as u16 + get_nnn(opcode) as u16;
         return pc;
     }
-    /**
-     * Set value of register I to NNN
-     */
-    fn handle_annn(&mut self, opcode: u16) -> u16 {
-        self.reg_i = get_nnn(opcode);
-        return self.pc + 2;
-    }
-
-    /**
-     * Skip next instr if Vx != Vy
-     */
-    fn handle_9xy0(&mut self, opcode: u16) -> u16 {
-        if self.reg_v[get_x(opcode)] != self.reg_v[get_y(opcode)] {
-            return self.pc + 4;
-        }
-        return self.pc + 2;
-    }
-    /**
-     * If Vy > Vx, V_f is 1; otherwise V_f 0.
-     * Then sets V_x = Vy - Vx
-     */
-    fn handle_8xy7(&mut self, opcode: u16) -> u16 {
-        let v_y = self.reg_v[get_y(opcode)];
-        let v_x = self.reg_v[get_x(opcode)];
-        if v_y > v_x {
-            self.reg_v[0x0f] = 1;
-        } else {
-            self.reg_v[0x0f] = 0;
-        }
-        self.reg_v[get_x(opcode)] = v_y - v_x;
-        return self.pc + 2;
-    }
 
     /**
     * Call subroutine at nnn.
@@ -499,7 +467,23 @@ impl CPU {
         } else {
             self.reg_v[0x0f] = 0;
         }
-        self.reg_v[get_x(opcode)] = v_x >> 1;
+        self.reg_v[get_x(opcode)] >>= 1;
+        return self.pc + 2;
+    }
+
+    /**
+     * If Vy > Vx, V_f is 1; otherwise V_f 0.
+     * Then sets V_x = Vy - Vx
+     */
+    fn handle_8xy7(&mut self, opcode: u16) -> u16 {
+        let v_y = self.reg_v[get_y(opcode)];
+        let v_x = self.reg_v[get_x(opcode)];
+        if v_y > v_x {
+            self.reg_v[0x0f] = 1;
+        } else {
+            self.reg_v[0x0f] = 0;
+        }
+        self.reg_v[get_x(opcode)] = v_y.wrapping_sub(v_x);
         return self.pc + 2;
     }
 
@@ -515,7 +499,25 @@ impl CPU {
         } else {
             self.reg_v[0x0f] = 0;
         }
-        self.reg_v[get_x(opcode)] = self.reg_v[get_x(opcode)] << 1;
+        self.reg_v[get_x(opcode)] <<= 1;
+        return self.pc + 2;
+    }
+
+    /**
+     * Skip next instr if Vx != Vy
+     */
+    fn handle_9xy0(&mut self, opcode: u16) -> u16 {
+        if self.reg_v[get_x(opcode)] != self.reg_v[get_y(opcode)] {
+            return self.pc + 4;
+        }
+        return self.pc + 2;
+    }
+
+    /**
+     * Set value of register I to NNN
+     */
+    fn handle_annn(&mut self, opcode: u16) -> u16 {
+        self.reg_i = get_nnn(opcode);
         return self.pc + 2;
     }
 }
@@ -638,5 +640,45 @@ mod tests {
     #[test]
     fn test_handle_8xy5() {
         let mut cpu = CPU::new();
+        let opcode = 0x8125;
+        cpu.reg_v[1] = 0x11;
+        cpu.reg_v[2] = 0x10;
+        cpu.handle_opcode(opcode);
+        assert_eq!(cpu.reg_v[1], (0x11 as u8).wrapping_sub(0x10 as u8));
+        assert_eq!(cpu.reg_v[0x0f], 1);
+        assert_eq!(cpu.pc, 2);
+    }
+
+    // need to fix
+    #[test]
+    fn test_handle_8xy6() {
+        let mut cpu = CPU::new();
+        let opcode = 0x8126;
+        cpu.reg_v[1] = 0x10;
+        cpu.handle_opcode(opcode);
+        assert_eq!(cpu.reg_v[1], 1);
+        assert_eq!(cpu.reg_v[0x0f], 1);
+    }
+    #[test]
+    fn test_handle_9xy0() {
+        let mut cpu = CPU::new();
+        let opcode = 0x9120;
+        cpu.reg_v[1] = 0x10;
+        cpu.reg_v[2] = 0x33;
+        cpu.handle_opcode(opcode);
+        assert_eq!(cpu.pc, 4);
+        cpu = CPU::new();
+        cpu.reg_v[1] = 0x10;
+        cpu.reg_v[2] = 0x10;
+        cpu.handle_opcode(opcode);
+        assert_eq!(cpu.pc, 2);
+    }
+    #[test]
+    fn test_handle_annn() {
+        let mut cpu = CPU::new();
+        let opcode = 0xa111;
+        cpu.handle_opcode(opcode);
+        assert_eq!(cpu.pc, 2);
+        assert_eq!(cpu.reg_i, 0x111);
     }
 }
