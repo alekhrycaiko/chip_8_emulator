@@ -42,7 +42,8 @@ impl Display {
     pub fn draw(&mut self, pixels: &[[u8; 64]; 32]) {
         for (x, row) in pixels.iter().enumerate() {
             for (y, &col) in row.iter().enumerate() {
-                // do we set draw color based on collission....?
+                let x = (x as u32) * SCALE;
+                let y = (y as u32) * SCALE;
                 if col == 1 {
                     let white = (255, 255, 255);
                     self.canvas.set_draw_color(white);
@@ -52,7 +53,7 @@ impl Display {
                 }
                 let _ = self
                     .canvas
-                    .fill_rect(Rect::new(x as i32, y as i32, SCALE, SCALE));
+                    .fill_rect(Rect::new(y as i32, x as i32, SCALE, SCALE));
             }
         }
         self.canvas.present();
