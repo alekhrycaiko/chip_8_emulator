@@ -428,7 +428,7 @@ impl CPU {
         if is_pressed {
             return self.pc + 2;
         }
-        return 4;
+        return self.pc + 4;
     }
 
     /**
