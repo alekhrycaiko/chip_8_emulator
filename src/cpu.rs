@@ -167,110 +167,6 @@ impl CPU {
         return self.pc;
     }
     /**
-     * Read registers V0 through Vx from memory starting at location I.
-     * The interpreter reads values from memory starting at location I into registers V0 through Vx.
-     * Read values from memory into reg_v0 to reg_vx
-     */
-    fn handle_fx65(&mut self, opcode: u16) -> u16 {
-        let v_x = (opcode & 0x0f00 >> 8) as usize;
-        for x in 0..(v_x + 1) {
-            self.reg_v[x] = self.memory[self.reg_i + x];
-        }
-        return self.pc + 2;
-    }
-    /**
-     * Store registers V0 through Vx in memory starting at location I.
-     * The interpreter copies the values of registers V0 through Vx into memory, starting at the address in I.
-     **/
-    fn handle_fx55(&mut self, opcode: u16) -> u16 {
-        let v_x = (opcode & 0x0f00 >> 8) as usize;
-        for x in 0..(v_x + 1) {
-            self.memory[self.reg_i + x] = self.reg_v[x];
-        }
-        return self.pc + 2;
-    }
-
-    /**
-     * Store BCD representation of Vx in memory locations I, I+1, and I+2.
-     * The interpreter takes the decimal value of Vx, and places the hundreds digit in memory at location in I,
-     * the tens digit at location I+1, and the ones digit at location I+2.
-     */
-    fn handle_fx33(&mut self, opcode: u16) -> u16 {
-        let x = get_x(opcode);
-        let v_x = self.reg_v[x as usize];
-        self.memory[self.reg_i] = v_x / 100;
-        self.memory[self.reg_i + 1] = (v_x % 100) % 10;
-        self.memory[self.reg_i + 2] = v_x % 10;
-        return self.pc + 2;
-    }
-
-    /**
-     * Set I = I + Vx.
-     * The values of I and Vx are added, and the results are stored in I.
-     */
-    fn handle_fx1e(&mut self, opcode: u16) -> u16 {
-        let i = self.reg_i + self.reg_v[get_x(opcode)] as usize;
-        self.reg_i = i;
-        return self.pc + 2;
-    }
-
-    /**
-     *  Set I = location of sprite for digit Vx.
-     *  Sprites are 5 bytes long
-     */
-    fn handle_fx29(&mut self, opcode: u16) -> u16 {
-        let v_x = get_x(opcode);
-        self.reg_i = v_x as usize * 5;
-        return self.pc + 2;
-    }
-
-    /**
-     * Wait for a key press, store the value of the key in Vx.
-     * All execution stops until a key is pressed, then the value of that key is stored in Vx.
-     */
-    fn handle_fx0a(&mut self, opcode: u16) -> u16 {
-        // TODO
-        self.reg_v[get_x(opcode)] = self.keyboard.block_for_input();
-        return self.pc + 2;
-    }
-
-    /**
-     * Set Vx to equal delay timers value
-     */
-    fn handle_fx07(&mut self, opcode: u16) -> u16 {
-        self.reg_v[get_x(opcode)] = self.delay_timer;
-        return self.pc + 2;
-    }
-
-    /**
-     * Set sound timer to equal vx.
-     */
-    fn handle_fx18(&mut self, opcode: u16) -> u16 {
-        self.sound_timer = self.reg_v[get_x(opcode)];
-        return self.pc + 2;
-    }
-
-    /**
-     * Set delay timer to equal vx.
-     */
-    fn handle_fx15(&mut self, opcode: u16) -> u16 {
-        self.delay_timer = self.reg_v[get_x(opcode)];
-        return self.pc + 2;
-    }
-    /**
-     * Skip next instruction if the key/w value of Vx is not pressed.
-     * If the key is in the up position; incr PC by 2.
-     * Otherwise, incr PC by 4.
-     */
-    fn handle_exa1(&mut self, opcode: u16) -> u16 {
-        let is_pressed = self.keyboard.is_key_pressed(self.reg_v[get_x(opcode)]);
-        if is_pressed {
-            return self.pc + 2;
-        }
-        return 4;
-    }
-
-    /**
     * Call subroutine at nnn.
     The interpreter increments the stack pointer, then puts the current PC on the top of the stack. The PC is then set to nnn.
     */
@@ -521,6 +417,105 @@ impl CPU {
         }
         return self.pc + 2;
     }
+
+    /**
+     * Skip next instruction if the key/w value of Vx is not pressed.
+     * If the key is in the up position; incr PC by 2.
+     * Otherwise, incr PC by 4.
+     */
+    fn handle_exa1(&mut self, opcode: u16) -> u16 {
+        let is_pressed = self.keyboard.is_key_pressed(self.reg_v[get_x(opcode)]);
+        if is_pressed {
+            return self.pc + 2;
+        }
+        return 4;
+    }
+
+    /**
+     * Set Vx to equal delay timers value
+     */
+    fn handle_fx07(&mut self, opcode: u16) -> u16 {
+        self.reg_v[get_x(opcode)] = self.delay_timer;
+        return self.pc + 2;
+    }
+    /**
+     * Wait for a key press, store the value of the key in Vx.
+     * All execution stops until a key is pressed, then the value of that key is stored in Vx.
+     */
+    fn handle_fx0a(&mut self, opcode: u16) -> u16 {
+        // TODO
+        self.reg_v[get_x(opcode)] = self.keyboard.block_for_input();
+        return self.pc + 2;
+    }
+
+    /**
+     * Set delay timer to equal vx.
+     */
+    fn handle_fx15(&mut self, opcode: u16) -> u16 {
+        self.delay_timer = self.reg_v[get_x(opcode)];
+        return self.pc + 2;
+    }
+    /**
+     * Set sound timer to equal vx.
+     */
+    fn handle_fx18(&mut self, opcode: u16) -> u16 {
+        self.sound_timer = self.reg_v[get_x(opcode)];
+        return self.pc + 2;
+    }
+
+    /**
+     * Set I = I + Vx.
+     * The values of I and Vx are added, and the results are stored in I.
+     */
+    fn handle_fx1e(&mut self, opcode: u16) -> u16 {
+        let i = self.reg_i + self.reg_v[get_x(opcode)] as usize;
+        self.reg_i = i;
+        return self.pc + 2;
+    }
+
+    /**
+     *  Set I = location of sprite for digit Vx.
+     *  Sprites are 5 bytes long
+     */
+    fn handle_fx29(&mut self, opcode: u16) -> u16 {
+        self.reg_i = (self.reg_v[get_x(opcode)] as usize) * 5;
+        return self.pc + 2;
+    }
+
+    /**
+     * Store BCD representation of Vx in memory locations I, I+1, and I+2.
+     * The interpreter takes the decimal value of Vx, and places the hundreds digit in memory at location in I,
+     * the tens digit at location I+1, and the ones digit at location I+2.
+     */
+    fn handle_fx33(&mut self, opcode: u16) -> u16 {
+        let v_x = self.reg_v[get_x(opcode)];
+        self.memory[self.reg_i] = v_x / 100;
+        self.memory[self.reg_i + 1] = (v_x % 100) / 10;
+        self.memory[self.reg_i + 2] = v_x % 10;
+        return self.pc + 2;
+    }
+
+    /**
+     * Store registers V0 through Vx in memory starting at location I.
+     * The interpreter copies the values of registers V0 through Vx into memory, starting at the address in I.
+     **/
+    fn handle_fx55(&mut self, opcode: u16) -> u16 {
+        for x in 0..get_x(opcode) + 1 {
+            self.memory[self.reg_i + x] = self.reg_v[x];
+        }
+        return self.pc + 2;
+    }
+    /**
+     * Read registers V0 through Vx from memory starting at location I.
+     * The interpreter reads values from memory starting at location I into registers V0 through Vx.
+     * Read values from memory into reg_v0 to reg_vx
+     */
+    fn handle_fx65(&mut self, opcode: u16) -> u16 {
+        for x in 0..get_x(opcode) + 1 {
+            self.reg_v[x] = self.memory[self.reg_i + x];
+        }
+        return self.pc + 2;
+    }
 }
 
 fn get_nnn(opcode: u16) -> usize {
@@ -657,8 +652,13 @@ mod tests {
         let opcode = 0x8126;
         cpu.reg_v[1] = 0x10;
         cpu.handle_opcode(opcode);
-        assert_eq!(cpu.reg_v[1], 1);
+        assert_eq!(cpu.reg_v[1], 0x10 >> 1);
+        assert_eq!(cpu.reg_v[0x0f], 0);
+        cpu = CPU::new();
+        cpu.reg_v[1] = 0x01;
+        cpu.handle_opcode(opcode);
         assert_eq!(cpu.reg_v[0x0f], 1);
+        assert_eq!(cpu.pc, 2);
     }
 
     #[test]
@@ -719,5 +719,101 @@ mod tests {
         cpu.reg_v[1] = 0x11;
         cpu.handle_opcode(opcode);
         assert_ne!(cpu.reg_v[1], 0);
+    }
+    #[test]
+    fn test_handle_dxyn() {
+        let mut cpu = CPU::new();
+        let opcode = 0xd120;
+        cpu.handle_opcode(opcode);
+        assert_eq!(cpu.display_changed, true);
+    }
+    #[test]
+    fn test_handle_ex9e() {
+        let mut cpu = CPU::new();
+        let opcode = 0xe19e;
+        cpu.handle_opcode(opcode);
+        assert_eq!(cpu.pc, 2);
+    }
+    // TODO: handle_fx0a
+    fn test_handle_fx0a() {}
+    #[test]
+    fn test_handle_fx07() {
+        let mut cpu = CPU::new();
+        let opcode = 0xf107;
+        cpu.delay_timer = 0x2;
+        cpu.reg_v[1] = 0x1;
+        cpu.handle_opcode(opcode);
+        assert_eq!(cpu.delay_timer, 0x2);
+    }
+    #[test]
+    fn test_handle_fx15() {
+        let mut cpu = CPU::new();
+        let opcode = 0xf115;
+        cpu.reg_v[1] = 0x5;
+        cpu.handle_opcode(opcode);
+        assert_eq!(cpu.delay_timer, 0x5);
+        assert_eq!(cpu.pc, 2);
+    }
+    #[test]
+    fn test_handle_fx18() {
+        let mut cpu = CPU::new();
+        let opcode = 0xf118;
+        cpu.reg_v[1] = 0x5;
+        cpu.handle_opcode(opcode);
+        assert_eq!(cpu.sound_timer, 0x5);
+        assert_eq!(cpu.pc, 2);
+    }
+    #[test]
+    fn test_handle_fx1e() {
+        let mut cpu = CPU::new();
+        let opcode = 0xf11e;
+        cpu.reg_v[1] = 0x5;
+        cpu.reg_i = 0x1;
+        cpu.handle_opcode(opcode);
+        assert_eq!(cpu.reg_i, 0x6);
+        assert_eq!(cpu.pc, 2);
+    }
+    #[test]
+    fn test_handle_fx29() {
+        let mut cpu = CPU::new();
+        let opcode = 0xf129;
+        cpu.reg_v[1] = 5;
+        cpu.handle_opcode(opcode);
+        assert_eq!(cpu.reg_i, 25);
+    }
+    #[test]
+    fn test_handle_fx33() {
+        let mut cpu = CPU::new();
+        let opcode = 0xf133;
+        cpu.reg_v[1] = 245;
+        cpu.reg_i = 0;
+        cpu.handle_opcode(opcode);
+        assert_eq!(cpu.memory[0], 2);
+        assert_eq!(cpu.memory[1], 4);
+        assert_eq!(cpu.memory[2], 5);
+    }
+    #[test]
+    fn test_handle_fx55() {
+        let mut cpu = CPU::new();
+        let opcode = 0xf355;
+        cpu.reg_i = 0x300;
+        cpu.reg_v[0] = 1;
+        cpu.reg_v[1] = 2;
+        cpu.reg_v[2] = 3;
+        cpu.handle_opcode(opcode);
+        assert_eq!(cpu.memory[0x300], 1);
+        assert_eq!(cpu.memory[0x301], 2);
+        assert_eq!(cpu.memory[0x302], 3);
+    }
+    #[test]
+    fn test_handle_fx65() {
+        let mut cpu = CPU::new();
+        let opcode = 0xf165;
+        cpu.reg_i = 0x200;
+        cpu.memory[0x200] = 2;
+        cpu.memory[0x201] = 3;
+        cpu.handle_opcode(opcode);
+        assert_eq!(cpu.reg_v[0], 2);
+        assert_eq!(cpu.reg_v[1], 3);
     }
 }

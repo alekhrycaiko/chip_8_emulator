@@ -16,10 +16,9 @@ impl Keyboard {
     /**
      * Returns true if the provided key is pressed.
      */
-    pub fn is_key_pressed(&self, key: u8) -> bool {
+    pub fn is_key_pressed(&self, _key: u8) -> bool {
         // TODO
-        println!("key is {:#}", key);
-        return true;
+        return false;
     }
     //TODO: any key is pressed function?
 }
