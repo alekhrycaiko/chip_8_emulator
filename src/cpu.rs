@@ -171,7 +171,6 @@ impl CPU {
     The interpreter increments the stack pointer, then puts the current PC on the top of the stack. The PC is then set to nnn.
     */
     fn handle_2nnn(&mut self, opcode: u16) -> u16 {
-        println!("hit 2nnn");
         self.stack[self.sp] = self.pc + 2;
         self.sp += 1;
         self.pc = get_nnn(opcode) as u16;
@@ -392,14 +391,14 @@ impl CPU {
      *
      */
     fn handle_dxyn(&mut self, opcode: u16) -> u16 {
-        let x = (self.reg_v[get_x(opcode)] as usize) % DISPLAY_WIDTH;
-        let y = (self.reg_v[get_y(opcode)] as usize) % DISPLAY_HEIGHT;
         let n = get_n(opcode);
         self.reg_v[0x0f] = 0;
-        for i in 0..n {
+        for byte in 0..n {
+            let y = (self.reg_v[get_y(opcode)] as usize + byte) % DISPLAY_HEIGHT;
             for bit in 0..8 {
-                let sprite_value = (self.memory[self.reg_i + i] >> 7 - bit) & 1;
-                self.reg_v[0x0f] = self.display_memory[y][x] & sprite_value;
+                let sprite_value = (self.memory[self.reg_i + byte] >> (7 - bit)) & 1;
+                let x = (self.reg_v[get_x(opcode)] as usize + bit) % DISPLAY_WIDTH;
+                self.reg_v[0x0f] |= self.display_memory[y][x] & sprite_value;
                 self.display_memory[y][x] ^= sprite_value;
             }
         }

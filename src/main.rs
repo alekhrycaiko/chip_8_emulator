@@ -46,6 +46,6 @@ fn main() {
             display.draw(result.display_memory);
         }
 
-        thread::sleep(SLEEP_TIMEOUT);
+        //        thread::sleep(SLEEP_TIMEOUT);
     }
 }
