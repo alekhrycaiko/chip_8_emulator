@@ -26,11 +26,13 @@ fn main() {
     file.read_to_end(&mut buffer).unwrap();
     let mut cpu = cpu::CPU::new();
     cpu.load_memory(&buffer);
-    let mut display = display::Display::new();
-    let sdl_context = &display.sdl_context;
+    let sdl_context = sdl2::init().unwrap();
+    let mut display = display::Display::new(&sdl_context);
+    //    let sdl_context = &display.sdl_context;
     let mut event_pump = sdl_context.event_pump().unwrap();
     'main_loop: loop {
         display.canvas.clear();
+        /*
         for event in event_pump.poll_iter() {
             match event {
                 Event::Quit { .. }
@@ -41,11 +43,11 @@ fn main() {
                 _ => {}
             }
         }
+        */
         let result = cpu.cycle();
         if result.display_changed {
             display.draw(result.display_memory);
         }
-
-        //        thread::sleep(SLEEP_TIMEOUT);
+        //thread::sleep(SLEEP_TIMEOUT);
     }
 }

@@ -41,6 +41,8 @@ pub struct CPU {
     keyboard: Keyboard,
     display_memory: [[u8; DISPLAY_WIDTH]; DISPLAY_HEIGHT],
     display_changed: bool,
+    keycode: u8,
+    keyboard_blocking: bool,
 }
 
 impl CPU {
@@ -63,6 +65,8 @@ impl CPU {
             keyboard: Keyboard::new(),
             display_memory: [[0; DISPLAY_WIDTH]; DISPLAY_HEIGHT],
             display_changed: false,
+            keycode: 0x0,
+            keyboard_blocking: false,
         };
     }
 
@@ -78,8 +82,12 @@ impl CPU {
     }
 
     pub fn cycle(&mut self) -> Output {
+        while self.keyboard_blocking {
+            // TODO: Get keycode into self.keycode.
+        }
         let opcode = self.get_opcode();
         self.handle_opcode(opcode);
+
         if self.delay_timer > 0 {
             self.delay_timer -= 1;
         }
@@ -442,8 +450,8 @@ impl CPU {
      * All execution stops until a key is pressed, then the value of that key is stored in Vx.
      */
     fn handle_fx0a(&mut self, opcode: u16) -> u16 {
-        // TODO
-        self.reg_v[get_x(opcode)] = self.keyboard.block_for_input();
+        self.keyboard_blocking = true;
+        self.reg_v[get_x(opcode)] = self.keycode;
         return self.pc + 2;
     }
 

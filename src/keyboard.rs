@@ -1,27 +1,12 @@
 use sdl2;
 //use sdl2::event::Event;
-pub struct Keyboard<'a> {
+pub struct Keyboard {
     keys: [bool; 16],
-    sdl2_context: &'a sdl2::Sdl,
 }
 
-impl<'a> Keyboard<'a> {
-    pub fn new(sdl_context: &'a sdl2::Sdl) -> Keyboard {
-        return Keyboard {
-            keys: [false; 16],
-            sdl2_context: sdl_context,
-        };
-    }
-
-    /**
-     * Blocking call that waits for a keyboard input before returning.
-     */
-    pub fn block_for_input(&self) -> u8 {
-        'blocking_loop: loop {
-            //for event in self.sdl_context.event_pump.poll_iter() {
-            //   Event::KeyDown { keycode: {} }
-            //}
-        }
+impl Keyboard {
+    pub fn new() -> Keyboard {
+        return Keyboard { keys: [false; 16] };
     }
 
     pub fn poll(&mut self) {}
