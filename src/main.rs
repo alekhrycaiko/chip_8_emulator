@@ -5,12 +5,12 @@ use std::env;
 use std::fs::File;
 use std::io::Read;
 use std::{thread, time};
-
 mod cpu;
 mod display;
+mod input;
 mod keyboard;
 
-const SLEEP_TIMEOUT: std::time::Duration = time::Duration::from_millis(10);
+const SLEEP_TIMEOUT: std::time::Duration = time::Duration::from_millis(1);
 
 fn main() {
     let args: Vec<_> = env::args().collect();
@@ -28,12 +28,11 @@ fn main() {
     cpu.load_memory(&buffer);
     let sdl_context = sdl2::init().unwrap();
     let mut display = display::Display::new(&sdl_context);
-    //    let sdl_context = &display.sdl_context;
-    let mut event_pump = sdl_context.event_pump().unwrap();
     'main_loop: loop {
-        display.canvas.clear();
-        /*
-        for event in event_pump.poll_iter() {
+        //        display.canvas.clear();
+        let result = cpu.cycle(&sdl_context);
+        let mut event_loop = input::Input::new(&sdl_context).event_loop;
+        for event in event_loop.poll_iter() {
             match event {
                 Event::Quit { .. }
                 | Event::KeyDown {
@@ -43,11 +42,9 @@ fn main() {
                 _ => {}
             }
         }
-        */
-        let result = cpu.cycle();
         if result.display_changed {
             display.draw(result.display_memory);
         }
-        //thread::sleep(SLEEP_TIMEOUT);
+        thread::sleep(SLEEP_TIMEOUT);
     }
 }

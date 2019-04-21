@@ -19,7 +19,6 @@ pub struct Display {
 
 impl Display {
     pub fn new(sdl_context: &sdl2::Sdl) -> Display {
-        let sdl_context = sdl2::init().unwrap();
         let video_subsystem = sdl_context.video().unwrap();
         let window = video_subsystem
             .window(WINDOW_NAME, WINDOW_WIDTH, WINDOW_HEIGHT)

@@ -1,15 +1,11 @@
-use sdl2;
-//use sdl2::event::Event;
 pub struct Keyboard {
-    keys: [bool; 16],
+    pub keys: [bool; 16],
 }
 
 impl Keyboard {
     pub fn new() -> Keyboard {
         return Keyboard { keys: [false; 16] };
     }
-
-    pub fn poll(&mut self) {}
 
     /**
      * Returns true if the provided key is pressed.
