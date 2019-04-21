@@ -2,6 +2,7 @@ use sdl2;
 use sdl2::event::Event;
 use sdl2::keyboard::Keycode;
 extern crate rand;
+use crate::audio;
 use crate::input;
 use crate::keyboard::Keyboard;
 use rand::Rng;
@@ -84,7 +85,7 @@ impl CPU {
             }
         }
     }
-    pub fn cycle(&mut self, sdl_context: &sdl2::Sdl) -> Output {
+    pub fn cycle(&mut self, sdl_context: &sdl2::Sdl, audio_driver: &audio::Audio) -> Output {
         if self.keyboard_blocking {
             while self.keyboard_blocking {
                 let num = self.keyboard_cycle(sdl_context);
@@ -103,6 +104,7 @@ impl CPU {
             self.delay_timer -= 1;
         }
         if self.sound_timer > 0 {
+            audio_driver.play();
             self.sound_timer -= 1;
         }
 
