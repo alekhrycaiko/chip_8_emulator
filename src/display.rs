@@ -15,12 +15,10 @@ const GREEN: u8 = 0;
 
 pub struct Display {
     pub canvas: Canvas<sdl2::video::Window>,
-    pub sdl_context: sdl2::Sdl,
 }
 
 impl Display {
-    pub fn new() -> Display {
-        let sdl_context = sdl2::init().unwrap();
+    pub fn new(sdl_context: &sdl2::Sdl) -> Display {
         let video_subsystem = sdl_context.video().unwrap();
         let window = video_subsystem
             .window(WINDOW_NAME, WINDOW_WIDTH, WINDOW_HEIGHT)
@@ -31,10 +29,7 @@ impl Display {
         canvas.set_draw_color(Color::RGB(RED, GREEN, BLUE));
         canvas.clear();
         canvas.present();
-        return Display {
-            canvas: canvas,
-            sdl_context: sdl_context,
-        };
+        return Display { canvas: canvas };
     }
     /**
      * Given a set of pixels, draw them on the canvas.
