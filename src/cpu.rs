@@ -156,7 +156,7 @@ impl CPU {
             }
         }
         self.display_changed = true;
-        return self.pc + 2;
+        self.pc + 2
     }
 
     fn handle_ret(&mut self) -> u16 {
@@ -184,7 +184,7 @@ impl CPU {
         if vx == kk {
             return self.pc + 4;
         }
-        return self.pc + 2;
+        self.pc + 2
     }
     /**
     * Skip next instruction if Vx != kk.
@@ -196,7 +196,7 @@ impl CPU {
         if self.reg_v[x] as usize == kk {
             return self.pc + 2;
         }
-        return self.pc + 4;
+        self.pc + 4
     }
     /**
      * Skip next instruction if Vx = Vy.
@@ -206,7 +206,7 @@ impl CPU {
         if self.reg_v[get_x(opcode)] == self.reg_v[get_y(opcode)] {
             return self.pc + 4;
         }
-        return self.pc + 2;
+        self.pc + 2
     }
 
     /**
@@ -215,7 +215,7 @@ impl CPU {
      */
     fn handle_6xkk(&mut self, opcode: u16) -> u16 {
         self.reg_v[get_x(opcode)] = get_kk(opcode) as u8;
-        return self.pc + 2;
+        self.pc + 2
     }
 
     /**
@@ -225,7 +225,7 @@ impl CPU {
     fn handle_7xkk(&mut self, opcode: u16) -> u16 {
         let result = get_kk(opcode) as u16 + self.reg_v[get_x(opcode)] as u16;
         self.reg_v[get_x(opcode)] = result as u8;
-        return self.pc + 2;
+        self.pc + 2
     }
 
     /**
@@ -234,7 +234,7 @@ impl CPU {
      */
     fn handle_8xy0(&mut self, opcode: u16) -> u16 {
         self.reg_v[get_x(opcode)] = self.reg_v[get_y(opcode)];
-        return self.pc + 2;
+        self.pc + 2
     }
 
     /**
@@ -243,7 +243,7 @@ impl CPU {
     */
     fn handle_8xy1(&mut self, opcode: u16) -> u16 {
         self.reg_v[get_x(opcode)] |= self.reg_v[get_y(opcode)];
-        return self.pc + 2;
+        self.pc + 2
     }
 
     /**
@@ -251,14 +251,14 @@ impl CPU {
      */
     fn handle_8xy2(&mut self, opcode: u16) -> u16 {
         self.reg_v[get_x(opcode)] &= self.reg_v[get_y(opcode)];
-        return self.pc + 2;
+        self.pc + 2
     }
     /**
      * Vx = XOR Vx Vy
      */
     fn handle_8xy3(&mut self, opcode: u16) -> u16 {
         self.reg_v[get_x(opcode)] ^= self.reg_v[get_y(opcode)];
-        return self.pc + 2;
+        self.pc + 2
     }
     /**
      * Vx = Vx + Vy
@@ -273,7 +273,7 @@ impl CPU {
             self.reg_v[0x0f] = 0;
         }
         self.reg_v[get_x(opcode)] = val as u8;
-        return self.pc + 2;
+        self.pc + 2
     }
     /**
      * If V_x > V_y then V_flag = 1
@@ -289,7 +289,7 @@ impl CPU {
             self.reg_v[0x0f] = 0;
         }
         self.reg_v[get_x(opcode)] = v_x.wrapping_sub(v_y);
-        return self.pc + 2;
+        self.pc + 2
     }
 
     /**
@@ -306,7 +306,7 @@ impl CPU {
             self.reg_v[0x0f] = 0;
         }
         self.reg_v[get_x(opcode)] >>= 1;
-        return self.pc + 2;
+        self.pc + 2
     }
 
     /**
@@ -322,7 +322,7 @@ impl CPU {
             self.reg_v[0x0f] = 0;
         }
         self.reg_v[get_x(opcode)] = v_y.wrapping_sub(v_x);
-        return self.pc + 2;
+        self.pc + 2
     }
 
     /**
@@ -338,7 +338,7 @@ impl CPU {
             self.reg_v[0x0f] = 0;
         }
         self.reg_v[get_x(opcode)] <<= 1;
-        return self.pc + 2;
+        self.pc + 2
     }
 
     /**
@@ -348,7 +348,7 @@ impl CPU {
         if self.reg_v[get_x(opcode)] != self.reg_v[get_y(opcode)] {
             return self.pc + 4;
         }
-        return self.pc + 2;
+        self.pc + 2
     }
 
     /**
@@ -356,14 +356,14 @@ impl CPU {
      */
     fn handle_annn(&mut self, opcode: u16) -> u16 {
         self.reg_i = get_nnn(opcode);
-        return self.pc + 2;
+        self.pc + 2
     }
     /**
      * Jump to location nnn + v0
      */
     fn handle_bnnn(&mut self, opcode: u16) -> u16 {
         let pc = (self.reg_v[0] as usize) + get_nnn(opcode);
-        return pc as u16;
+        pc as u16
     }
 
     /**
@@ -375,7 +375,7 @@ impl CPU {
     fn handle_cxkk(&mut self, opcode: u16) -> u16 {
         let val: u8 = rand::thread_rng().gen();
         self.reg_v[get_x(opcode)] = val & get_kk(opcode) as u8;
-        return self.pc + 2;
+        self.pc + 2
     }
     /**
      * Display n-byte sprite starting at memory location I, at (Vx, Vy)
@@ -402,7 +402,7 @@ impl CPU {
             }
         }
         self.display_changed = true;
-        return self.pc + 2;
+        self.pc + 2
     }
 
     /**
@@ -413,7 +413,7 @@ impl CPU {
         if is_pressed {
             return self.pc + 4;
         }
-        return self.pc + 2;
+        self.pc + 2
     }
 
     /**
@@ -426,7 +426,7 @@ impl CPU {
         if is_pressed {
             return self.pc + 2;
         }
-        return self.pc + 4;
+        self.pc + 4
     }
 
     /**
@@ -434,7 +434,7 @@ impl CPU {
      */
     fn handle_fx07(&mut self, opcode: u16) -> u16 {
         self.reg_v[get_x(opcode)] = self.delay_timer;
-        return self.pc + 2;
+        self.pc + 2
     }
     /**
      * Wait for a key press, store the value of the key in Vx.
@@ -443,7 +443,7 @@ impl CPU {
     fn handle_fx0a(&mut self, opcode: u16) -> u16 {
         self.keyboard_blocking = true;
         self.reg_v[get_x(opcode)] = self.keycode;
-        return self.pc + 2;
+        self.pc + 2
     }
 
     /**
@@ -451,14 +451,14 @@ impl CPU {
      */
     fn handle_fx15(&mut self, opcode: u16) -> u16 {
         self.delay_timer = self.reg_v[get_x(opcode)];
-        return self.pc + 2;
+        self.pc + 2
     }
     /**
      * Set sound timer to equal vx.
      */
     fn handle_fx18(&mut self, opcode: u16) -> u16 {
         self.sound_timer = self.reg_v[get_x(opcode)];
-        return self.pc + 2;
+        self.pc + 2
     }
 
     /**
@@ -468,7 +468,7 @@ impl CPU {
     fn handle_fx1e(&mut self, opcode: u16) -> u16 {
         let i = self.reg_i + self.reg_v[get_x(opcode)] as usize;
         self.reg_i = i;
-        return self.pc + 2;
+        self.pc + 2
     }
 
     /**
@@ -477,7 +477,7 @@ impl CPU {
      */
     fn handle_fx29(&mut self, opcode: u16) -> u16 {
         self.reg_i = (self.reg_v[get_x(opcode)] as usize) * 5;
-        return self.pc + 2;
+        self.pc + 2
     }
 
     /**
@@ -490,7 +490,7 @@ impl CPU {
         self.memory[self.reg_i] = v_x / 100;
         self.memory[self.reg_i + 1] = (v_x % 100) / 10;
         self.memory[self.reg_i + 2] = v_x % 10;
-        return self.pc + 2;
+        self.pc + 2
     }
 
     /**
@@ -501,7 +501,7 @@ impl CPU {
         for x in 0..get_x(opcode) + 1 {
             self.memory[self.reg_i + x] = self.reg_v[x];
         }
-        return self.pc + 2;
+        self.pc + 2
     }
     /**
      * Read registers V0 through Vx from memory starting at location I.
@@ -512,31 +512,31 @@ impl CPU {
         for x in 0..get_x(opcode) + 1 {
             self.reg_v[x] = self.memory[self.reg_i + x];
         }
-        return self.pc + 2;
+        self.pc + 2
     }
 }
 
 fn get_nnn(opcode: u16) -> usize {
-    return (opcode & 0x0fff) as usize;
+    (opcode & 0x0fff) as usize
 }
 /**
  * Returns the integer representation of x from the u16.
  */
 fn get_x(opcode: u16) -> usize {
-    return ((opcode & 0x0f00) >> 8) as usize;
+    ((opcode & 0x0f00) >> 8) as usize
 }
 /**
  * Returns the integer representation of kk from the u16.
  */
 fn get_kk(opcode: u16) -> usize {
-    return (opcode & 0x00ff) as usize;
+    (opcode & 0x00ff) as usize
 }
 
 fn get_y(opcode: u16) -> usize {
-    return ((opcode & 0x00f0) >> 4) as usize;
+    ((opcode & 0x00f0) >> 4) as usize
 }
 fn get_n(opcode: u16) -> usize {
-    return (opcode & 0x000f) as usize;
+    (opcode & 0x000f) as usize
 }
 
 #[cfg(test)]

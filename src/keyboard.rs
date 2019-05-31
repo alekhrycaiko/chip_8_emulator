@@ -8,18 +8,18 @@ pub struct Keyboard {
 }
 
 impl Keyboard {
-    pub fn new() -> Keyboard {
-        return Keyboard {
+    pub fn new() -> Self {
+        Keyboard {
             keys: [false; 16],
             key_clicked: 17,
-        };
+        }
     }
 
     /**
      * Returns true if the provided key is pressed.
      */
     pub fn is_key_pressed(&mut self, key: u8) -> bool {
-        return match key {
+        match key {
             0x0 => self.keys[0],
             0x1 => self.keys[1],
             0x2 => self.keys[2],
@@ -37,7 +37,7 @@ impl Keyboard {
             0xe => self.keys[14],
             0xf => self.keys[15],
             _ => false,
-        };
+        }
     }
 
     pub fn cycle(&mut self, sdl_context: &sdl2::Sdl) {

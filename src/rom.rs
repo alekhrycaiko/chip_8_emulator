@@ -16,6 +16,6 @@ impl Rom {
             Ok(content) => content,
             Err(e) => panic!("{}", e),
         };
-        return Rom { data: buffer };
+        Rom { data: buffer }
     }
 }
