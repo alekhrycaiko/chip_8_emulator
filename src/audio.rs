@@ -31,7 +31,7 @@ impl Audio {
     pub fn new(sdl_context: &sdl2::Sdl) -> Audio {
         let audio_system = match sdl_context.audio() {
             Ok(v) => v,
-            Err(_) => panic!("Error, SDL2 for audio subsystem failed to init"),
+            Err(e) => panic!("Error, SDL2 for audio subsystem failed to init. E is {}", e),
         };
         let desired_spec = AudioSpecDesired {
             freq: None,
@@ -39,7 +39,7 @@ impl Audio {
             samples: None,  // default sample size
         };
 
-        let device = match audio_system.open_playback(None, &desired_spec, |spec| {
+        let audio_device = match audio_system.open_playback(None, &desired_spec, |spec| {
             // initialize the audio callback
             SquareWave {
                 phase_inc: 440.0 / spec.freq as f32,
@@ -50,9 +50,7 @@ impl Audio {
             Ok(v) => v,
             Err(_) => panic!("Error couldn't construct a squarewave"),
         };
-        return Audio {
-            audio_device: device,
-        };
+        Audio { audio_device }
     }
     pub fn play(&self) {
         self.audio_device.resume();

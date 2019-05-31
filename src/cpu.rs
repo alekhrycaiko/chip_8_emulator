@@ -31,7 +31,6 @@ pub struct CPU {
 
 impl CPU {
     pub fn new(file_buffer: &[u8]) -> Self {
-        let stack = [0x000; 16];
         let mut memory = [0x00; CPU_MEMORY];
         let font_set = FontSet::new();
         for i in 0..font_set.set.len() {
@@ -45,21 +44,21 @@ impl CPU {
                 break;
             }
         }
-        return CPU {
+        CPU {
             reg_v: [0; 16],
             reg_i: 0,
             delay_timer: 0,
             sound_timer: 0,
             pc: 0x000,
             sp: 0,
-            stack: stack,
-            memory: memory,
+            stack: [0x000; 16],
+            memory,
             keyboard: Keyboard::new(),
             display_memory: [[0; DISPLAY_WIDTH]; DISPLAY_HEIGHT],
             display_changed: false,
             keycode: 0x0,
             keyboard_blocking: false,
-        };
+        }
     }
 
     pub fn cycle(&mut self, sdl_context: &sdl2::Sdl, audio_driver: &audio::Audio) -> Output {
@@ -85,17 +84,16 @@ impl CPU {
             self.sound_timer -= 1;
         }
 
-        return Output {
+        Output {
             display_memory: &self.display_memory,
             display_changed: self.display_changed,
-        };
+        }
     }
 
     fn get_opcode(&mut self) -> u16 {
         let first_byte = self.memory[self.pc as usize];
         let second_byte = self.memory[self.pc as usize + 1];
-        let opcode = ((first_byte as u16) << 8) | second_byte as u16;
-        return opcode;
+        ((first_byte as u16) << 8) | second_byte as u16
     }
 
     pub fn handle_opcode(&mut self, opcode: u16) {
@@ -145,7 +143,7 @@ impl CPU {
     }
     fn handle_1nnn(&mut self, opcode: u16) -> u16 {
         self.pc = opcode & 0x0fff;
-        return self.pc;
+        self.pc
     }
 
     fn handle_cls(&mut self) -> u16 {
@@ -162,7 +160,7 @@ impl CPU {
     fn handle_ret(&mut self) -> u16 {
         self.sp -= 1;
         self.pc = self.stack[self.sp];
-        return self.pc;
+        self.pc
     }
     /**
     * Call subroutine at nnn.
@@ -172,7 +170,7 @@ impl CPU {
         self.stack[self.sp] = self.pc + 2;
         self.sp += 1;
         self.pc = get_nnn(opcode) as u16;
-        return self.pc;
+        self.pc
     }
     /*
      * Skip next instruction if Vx = kk.
@@ -330,7 +328,7 @@ impl CPU {
      * V_x following this is also multipled by 2.
      */
     fn handle_8xye(&mut self, opcode: u16) -> u16 {
-        let v_x = self.reg_v[get_x(opcode)] & 0b10000000;
+        let v_x = self.reg_v[get_x(opcode)] & 0b1000_0000;
         let most_sig_bit = v_x >> 7;
         if most_sig_bit == 1 {
             self.reg_v[0x0f] = 1;

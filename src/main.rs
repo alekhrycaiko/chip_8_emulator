@@ -15,7 +15,7 @@ const SLEEP_TIMEOUT: std::time::Duration = time::Duration::from_millis(1);
 
 fn main() {
     let args: Vec<_> = env::args().collect();
-    if args.len() < 1 {
+    if args.is_empty() {
         panic!()
     }
     let file_name = &args[1];

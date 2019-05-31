@@ -38,7 +38,7 @@ impl Display {
         canvas.set_draw_color(Color::RGB(RED, GREEN, BLUE));
         canvas.clear();
         canvas.present();
-        return Display { canvas: canvas };
+        return Display { canvas };
     }
     /**
      * Given a set of pixels, draw them on the canvas.
