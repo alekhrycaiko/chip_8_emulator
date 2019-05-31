@@ -6,6 +6,7 @@ use std::{thread, time};
 mod audio;
 mod cpu;
 mod display;
+mod font;
 mod input;
 mod keyboard;
 mod rom;

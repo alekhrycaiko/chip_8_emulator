@@ -1,33 +1,12 @@
 use sdl2;
-use sdl2::event::Event;
-use sdl2::keyboard::Keycode;
 extern crate rand;
 use crate::audio;
-use crate::input;
+use crate::font::FontSet;
 use crate::keyboard::Keyboard;
 use rand::Rng;
-
 const DISPLAY_WIDTH: usize = 64;
 const DISPLAY_HEIGHT: usize = 32;
 const CPU_MEMORY: usize = 4096;
-
-struct FontSet {
-    set: [u8; 80],
-}
-impl FontSet {
-    pub fn new() -> FontSet {
-        return FontSet {
-            set: [
-                0xF0, 0x90, 0x90, 0x90, 0xF0, 0x20, 0x60, 0x20, 0x20, 0x70, 0xF0, 0x10, 0xF0, 0x80,
-                0xF0, 0xF0, 0x10, 0xF0, 0x10, 0xF0, 0x90, 0x90, 0xF0, 0x10, 0x10, 0xF0, 0x80, 0xF0,
-                0x10, 0xF0, 0xF0, 0x80, 0xF0, 0x90, 0xF0, 0xF0, 0x10, 0x20, 0x40, 0x40, 0xF0, 0x90,
-                0xF0, 0x90, 0xF0, 0xF0, 0x90, 0xF0, 0x10, 0xF0, 0xF0, 0x90, 0xF0, 0x90, 0x90, 0xE0,
-                0x90, 0xE0, 0x90, 0xE0, 0xF0, 0x80, 0x80, 0x80, 0xF0, 0xE0, 0x90, 0x90, 0x90, 0xE0,
-                0xF0, 0x80, 0xF0, 0x80, 0xF0, 0xF0, 0x80, 0xF0, 0x80, 0x80,
-            ],
-        };
-    }
-}
 
 pub struct Output<'a> {
     pub display_memory: &'a [[u8; DISPLAY_WIDTH]; DISPLAY_HEIGHT],
@@ -86,14 +65,14 @@ impl CPU {
     pub fn cycle(&mut self, sdl_context: &sdl2::Sdl, audio_driver: &audio::Audio) -> Output {
         if self.keyboard_blocking {
             while self.keyboard_blocking {
-                let num = self.keyboard_cycle(sdl_context);
+                let num = self.keyboard.cycle(sdl_context);
                 if num > 0 && num < 0x11 {
                     self.keyboard_blocking = false;
                     self.keycode = num;
                 }
             }
         } else {
-            let _ = self.keyboard_cycle(sdl_context);
+            let _ = self.keyboard.cycle(sdl_context);
         }
         let opcode = self.get_opcode();
         self.handle_opcode(opcode);
@@ -112,243 +91,6 @@ impl CPU {
         };
     }
 
-    fn keyboard_cycle(&mut self, sdl_context: &sdl2::Sdl) -> u8 {
-        let mut event_loop = input::Input::new(sdl_context).event_loop;
-        for event in event_loop.poll_iter() {
-            match event {
-                Event::KeyDown {
-                    keycode: Some(Keycode::Num0),
-                    ..
-                } => {
-                    self.keyboard.keys[0] = true;
-                    return 16;
-                }
-                Event::KeyUp {
-                    keycode: Some(Keycode::Num0),
-                    ..
-                } => {
-                    self.keyboard.keys[0] = false;
-                    return 16;
-                }
-                Event::KeyDown {
-                    keycode: Some(Keycode::Num1),
-                    ..
-                } => {
-                    self.keyboard.keys[1] = true;
-                    return 1;
-                }
-                Event::KeyUp {
-                    keycode: Some(Keycode::Num1),
-                    ..
-                } => {
-                    self.keyboard.keys[1] = false;
-                    return 1;
-                }
-                Event::KeyDown {
-                    keycode: Some(Keycode::Num2),
-                    ..
-                } => {
-                    self.keyboard.keys[2] = true;
-                    return 2;
-                }
-                Event::KeyUp {
-                    keycode: Some(Keycode::Num2),
-                    ..
-                } => {
-                    self.keyboard.keys[2] = false;
-                    return 2;
-                }
-                Event::KeyDown {
-                    keycode: Some(Keycode::Num3),
-                    ..
-                } => {
-                    self.keyboard.keys[3] = true;
-                    return 3;
-                }
-                Event::KeyUp {
-                    keycode: Some(Keycode::Num3),
-                    ..
-                } => {
-                    self.keyboard.keys[3] = false;
-                    return 3;
-                }
-                Event::KeyDown {
-                    keycode: Some(Keycode::Num4),
-                    ..
-                } => {
-                    self.keyboard.keys[4] = true;
-                    return 4;
-                }
-                Event::KeyUp {
-                    keycode: Some(Keycode::Num4),
-                    ..
-                } => {
-                    self.keyboard.keys[4] = false;
-                    return 4;
-                }
-                Event::KeyDown {
-                    keycode: Some(Keycode::Num5),
-                    ..
-                } => {
-                    self.keyboard.keys[5] = true;
-                    return 5;
-                }
-                Event::KeyUp {
-                    keycode: Some(Keycode::Num5),
-                    ..
-                } => {
-                    self.keyboard.keys[5] = false;
-                    return 5;
-                }
-                Event::KeyDown {
-                    keycode: Some(Keycode::Num6),
-                    ..
-                } => {
-                    self.keyboard.keys[6] = true;
-                    return 6;
-                }
-                Event::KeyUp {
-                    keycode: Some(Keycode::Num6),
-                    ..
-                } => {
-                    self.keyboard.keys[6] = false;
-                    return 6;
-                }
-
-                Event::KeyDown {
-                    keycode: Some(Keycode::Num7),
-                    ..
-                } => {
-                    self.keyboard.keys[7] = true;
-                    return 7;
-                }
-                Event::KeyUp {
-                    keycode: Some(Keycode::Num7),
-                    ..
-                } => {
-                    self.keyboard.keys[7] = false;
-                    return 7;
-                }
-                Event::KeyDown {
-                    keycode: Some(Keycode::Num8),
-                    ..
-                } => {
-                    self.keyboard.keys[8] = true;
-                    return 8;
-                }
-                Event::KeyUp {
-                    keycode: Some(Keycode::Num8),
-                    ..
-                } => {
-                    self.keyboard.keys[8] = false;
-                    return 8;
-                }
-                Event::KeyDown {
-                    keycode: Some(Keycode::Num9),
-                    ..
-                } => {
-                    self.keyboard.keys[9] = true;
-                    return 9;
-                }
-                Event::KeyUp {
-                    keycode: Some(Keycode::Num9),
-                    ..
-                } => {
-                    self.keyboard.keys[9] = false;
-                    return 9;
-                }
-                Event::KeyDown {
-                    keycode: Some(Keycode::A),
-                    ..
-                } => {
-                    self.keyboard.keys[10] = true;
-                    return 10;
-                }
-                Event::KeyUp {
-                    keycode: Some(Keycode::A),
-                    ..
-                } => {
-                    self.keyboard.keys[10] = false;
-                    return 10;
-                }
-                Event::KeyDown {
-                    keycode: Some(Keycode::B),
-                    ..
-                } => {
-                    self.keyboard.keys[11] = true;
-                    return 11;
-                }
-                Event::KeyUp {
-                    keycode: Some(Keycode::B),
-                    ..
-                } => {
-                    self.keyboard.keys[11] = false;
-                    return 11;
-                }
-                Event::KeyDown {
-                    keycode: Some(Keycode::C),
-                    ..
-                } => {
-                    self.keyboard.keys[12] = true;
-                    return 12;
-                }
-                Event::KeyUp {
-                    keycode: Some(Keycode::C),
-                    ..
-                } => {
-                    self.keyboard.keys[12] = true;
-                    return 12;
-                }
-                Event::KeyDown {
-                    keycode: Some(Keycode::D),
-                    ..
-                } => {
-                    self.keyboard.keys[13] = true;
-                    return 13;
-                }
-                Event::KeyUp {
-                    keycode: Some(Keycode::D),
-                    ..
-                } => {
-                    self.keyboard.keys[13] = false;
-                    return 13;
-                }
-
-                Event::KeyDown {
-                    keycode: Some(Keycode::E),
-                    ..
-                } => {
-                    self.keyboard.keys[14] = true;
-                    return 14;
-                }
-                Event::KeyUp {
-                    keycode: Some(Keycode::E),
-                    ..
-                } => {
-                    self.keyboard.keys[14] = false;
-                    return 14;
-                }
-
-                Event::KeyDown {
-                    keycode: Some(Keycode::F),
-                    ..
-                } => {
-                    self.keyboard.keys[15] = true;
-                    return 15;
-                }
-                Event::KeyUp {
-                    keycode: Some(Keycode::F),
-                    ..
-                } => {
-                    self.keyboard.keys[15] = false;
-                    return 15;
-                }
-                Event::Quit { .. } => return 17,
-                _ => return 17,
-            }
-        }
-        return 16;
-    }
     fn get_opcode(&mut self) -> u16 {
         let first_byte = self.memory[self.pc as usize];
         let second_byte = self.memory[self.pc as usize + 1];
