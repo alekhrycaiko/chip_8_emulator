@@ -543,7 +543,6 @@ fn get_n(opcode: u16) -> usize {
 mod tests {
     use super::*;
 
-    // TODO we should assert PC for all the tests.
     #[test]
     fn test_handle_2nnn() {
         let mut cpu = CPU::new();
@@ -732,8 +731,7 @@ mod tests {
         cpu.handle_opcode(opcode);
         assert_eq!(cpu.pc, 2);
     }
-    // TODO: handle_fx0a
-    fn test_handle_fx0a() {}
+
     #[test]
     fn test_handle_fx07() {
         let mut cpu = CPU::new();
