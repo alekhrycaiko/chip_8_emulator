@@ -65,10 +65,10 @@ impl CPU {
     pub fn cycle(&mut self, sdl_context: &sdl2::Sdl, audio_driver: &audio::Audio) -> Output {
         if self.keyboard_blocking {
             while self.keyboard_blocking {
-                let num = self.keyboard.cycle(sdl_context);
-                if num > 0 && num < 0x11 {
+                self.keyboard.cycle(sdl_context);
+                if self.keyboard.key_clicked > 0 && self.keyboard.key_clicked < 0x11 {
                     self.keyboard_blocking = false;
-                    self.keycode = num;
+                    self.keycode = self.keyboard.key_clicked;
                 }
             }
         } else {
