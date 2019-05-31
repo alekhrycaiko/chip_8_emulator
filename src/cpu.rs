@@ -30,7 +30,7 @@ pub struct CPU {
 }
 
 impl CPU {
-    pub fn new(file_buffer: &[u8]) -> CPU {
+    pub fn new(file_buffer: &[u8]) -> Self {
         let stack = [0x000; 16];
         let mut memory = [0x00; CPU_MEMORY];
         let font_set = FontSet::new();
