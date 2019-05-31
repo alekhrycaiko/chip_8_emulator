@@ -395,6 +395,7 @@ impl CPU {
             let y = (self.reg_v[get_y(opcode)] as usize + byte) % DISPLAY_HEIGHT;
             for bit in 0..8 {
                 let sprite_value = (self.memory[self.reg_i + byte] >> (7 - bit)) & 1;
+                // Referenced from Starhorne's implementation
                 let x = (self.reg_v[get_x(opcode)] as usize + bit) % DISPLAY_WIDTH;
                 self.reg_v[0x0f] |= self.display_memory[y][x] & sprite_value;
                 self.display_memory[y][x] ^= sprite_value;
@@ -440,7 +441,6 @@ impl CPU {
      * All execution stops until a key is pressed, then the value of that key is stored in Vx.
      */
     fn handle_fx0a(&mut self, opcode: u16) -> u16 {
-        println!("keycode needs to be set");
         self.keyboard_blocking = true;
         self.reg_v[get_x(opcode)] = self.keycode;
         return self.pc + 2;
