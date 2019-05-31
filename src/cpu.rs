@@ -51,12 +51,20 @@ pub struct CPU {
 }
 
 impl CPU {
-    pub fn new() -> CPU {
+    pub fn new(file_buffer: &[u8]) -> CPU {
         let stack = [0x000; 16];
         let mut memory = [0x00; CPU_MEMORY];
         let font_set = FontSet::new();
         for i in 0..font_set.set.len() {
             memory[i] = font_set.set[i];
+        }
+        for (i, &byte) in file_buffer.iter().enumerate() {
+            let address = 0x200 + i;
+            if address < 4096 {
+                memory[address] = byte;
+            } else {
+                break;
+            }
         }
         return CPU {
             reg_v: [0; 16],
@@ -75,16 +83,6 @@ impl CPU {
         };
     }
 
-    pub fn load_memory(&mut self, file_buffer: &[u8]) {
-        for (i, &byte) in file_buffer.iter().enumerate() {
-            let address = 0x200 + i;
-            if address < 4096 {
-                self.memory[address] = byte;
-            } else {
-                break;
-            }
-        }
-    }
     pub fn cycle(&mut self, sdl_context: &sdl2::Sdl, audio_driver: &audio::Audio) -> Output {
         if self.keyboard_blocking {
             while self.keyboard_blocking {

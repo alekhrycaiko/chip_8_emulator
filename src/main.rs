@@ -2,14 +2,14 @@ extern crate sdl2;
 use sdl2::event::Event;
 use sdl2::keyboard::Keycode;
 use std::env;
-use std::fs::File;
-use std::io::Read;
 use std::{thread, time};
 mod audio;
 mod cpu;
 mod display;
 mod input;
 mod keyboard;
+mod rom;
+
 const SLEEP_TIMEOUT: std::time::Duration = time::Duration::from_millis(1);
 
 fn main() {
@@ -18,19 +18,15 @@ fn main() {
         panic!()
     }
     let file_name = &args[1];
-    let mut file = match File::open(file_name) {
-        Ok(file) => file,
-        Err(..) => panic!("file didnt exist"),
+    let rom = rom::Rom::new(file_name.to_string());
+    let mut cpu = cpu::CPU::new(&rom.data);
+    let sdl_context = match sdl2::init() {
+        Ok(sdl2) => sdl2,
+        Err(err) => panic!("{}", err),
     };
-    let mut buffer = Vec::new();
-    file.read_to_end(&mut buffer).unwrap();
-    let mut cpu = cpu::CPU::new();
-    cpu.load_memory(&buffer);
-    let sdl_context = sdl2::init().unwrap();
     let mut display = display::Display::new(&sdl_context);
     let audio_driver = audio::Audio::new(&sdl_context);
     'main_loop: loop {
-        //        display.canvas.clear();
         let result = cpu.cycle(&sdl_context, &audio_driver);
         let mut event_loop = input::Input::new(&sdl_context).event_loop;
         for event in event_loop.poll_iter() {

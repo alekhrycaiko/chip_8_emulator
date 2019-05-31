@@ -19,13 +19,22 @@ pub struct Display {
 
 impl Display {
     pub fn new(sdl_context: &sdl2::Sdl) -> Display {
-        let video_subsystem = sdl_context.video().unwrap();
-        let window = video_subsystem
+        let video_subsystem = match sdl_context.video() {
+            Ok(video) => video,
+            Err(err) => panic!("{}", err),
+        };
+        let window = match video_subsystem
             .window(WINDOW_NAME, WINDOW_WIDTH, WINDOW_HEIGHT)
             .position_centered()
             .build()
-            .unwrap();
-        let mut canvas = window.into_canvas().build().unwrap();
+        {
+            Ok(window) => window,
+            Err(err) => panic!("{}", err),
+        };
+        let mut canvas = match window.into_canvas().build() {
+            Ok(canvas) => canvas,
+            Err(err) => panic!("{}", err),
+        };
         canvas.set_draw_color(Color::RGB(RED, GREEN, BLUE));
         canvas.clear();
         canvas.present();

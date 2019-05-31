@@ -8,7 +8,10 @@ pub struct Input {
 impl Input {
     pub fn new(sdl_context: &sdl2::Sdl) -> Input {
         return Input {
-            event_loop: sdl_context.event_pump().unwrap(),
+            event_loop: match sdl_context.event_pump() {
+                Ok(event_loop) => event_loop,
+                Err(err) => panic!("{}", err),
+            },
         };
     }
 }
